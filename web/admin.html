@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="OMR Optik Form Okuma Sistemi — Admin Yönetim Paneli. Kullanıcı yönetimi ve şablon işlemleri.">
+    <title>OMR - Admin Paneli</title>
+    <!-- Pico.css -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <script src="./runtime-config.js"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Özel Stiller -->
+    <link rel="stylesheet" href="./style.css">
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="./manifest.json">
+    <style>
+        /* Admin paneline özgü eklentiler (style.css ile çakışmayan kurallar) */
+        body { padding-top: 0; }
+        .filter-group { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+        .filter-group button { padding: 0.25rem 1rem; width: auto; margin: 0; }
+    </style>
+</head>
+<body>
+    <nav class="navbar container-fluid">
+        <div class="container nav-container">
+            <strong data-i18n="admin_panel">OMR — Admin Paneli</strong>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <span id="userNameDisplay" style="font-weight: bold; display: none;"></span>
+                <button id="profileBtn" class="secondary outline" style="padding: 0.25rem; width: auto; margin: 0; border: none;" title="Profilim" onclick="openProfileModal()"><i class="ph ph-user"></i></button>
+                <button id="darkModeToggle" class="secondary outline" style="padding: 0.25rem; width: auto; margin: 0; border: none;" title="Tema Değiştir"></button>
+                <button class="lang-toggle secondary outline" style="padding: 0.25rem 0.5rem; width: auto; margin: 0; border: none;">
+                    <i class="ph ph-globe"></i> <span class="lang-text">EN</span>
+                </button>
+                <button id="logoutBtn" class="secondary outline" style="padding: 0.25rem 1rem; width: auto; margin: 0;" data-i18n="nav_logout">Çıkış</button>
+                <button id="mobileMenuBtn" class="hamburger-btn"><i class="ph ph-list"></i></button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobil sidebar overlay -->
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeMobileSidebar()"></div>
+
+    <main class="container layout">
+        <aside class="sidebar">
+            <nav class="menu">
+                <a href="#" data-target="users" class="active"><i class="ph ph-users"></i> <span data-i18n="nav_users">Kullanıcılar</span></a>
+                <a href="#" data-target="classes"><i class="ph ph-users-three"></i> <span data-i18n="nav_classes">Sınıflar</span></a>
+                <a href="#" data-target="exams"><i class="ph ph-exam"></i> <span data-i18n="nav_exams">Sınavlar</span></a>
+                <a href="#" data-target="templates"><i class="ph ph-file-doc"></i> <span data-i18n="nav_templates">Şablonlar</span></a>
+                <a href="#" data-target="audit"><i class="ph ph-file-magnifying-glass"></i> <span data-i18n="nav_audit">Denetim Kaydı</span></a>
+                
+
+            </nav>
+        </aside>
+
+        <section>
+        <section>
+            <!-- Kullanıcılar -->
+            <div id="users" class="section-content active">
+                <h2 data-i18n="user_mgmt">Kullanıcı Yönetimi</h2>
+                
+                <div class="grid">
+                    <article>
+                        <header><strong data-i18n="add_user">Yeni Kullanıcı Ekle</strong></header>
+                        <form id="newUserForm">
+                            <div class="grid">
+                                <input type="text" id="nuName" data-i18n-placeholder="name_placeholder" placeholder="Ad Soyad" required>
+                                <input type="email" id="nuEmail" data-i18n-placeholder="email_placeholder" placeholder="E-Posta" required>
+                            </div>
+                            <div class="grid">
+                                <!-- Şifre + "göster/gizle" + "rastgele üret" -->
+                                <div style="position:relative;">
+                                    <input type="password" id="nuPass" data-i18n-placeholder="password_placeholder" placeholder="Şifre" required style="padding-right: 5rem;">
+                                    <button type="button" id="nuPassRandom" style="position:absolute; right: 2.5rem; top: 0.25rem; padding: 0.2rem 0.4rem; width:auto; margin: 0; font-size: 0.75rem;" class="outline secondary" title="Rastgele şifre üret" data-i18n-title="pwd_random">⚂</button>
+                                    <button type="button" id="nuPassToggle" style="position:absolute; right: 0.25rem; top: 0.25rem; padding: 0.2rem 0.4rem; width:auto; margin: 0; font-size: 0.85rem;" class="outline secondary" title="Şifreyi göster/gizle" data-i18n-title="pwd_show_hide"><i class="ph ph-eye"></i></button>
+                                </div>
+                                <select id="nuRole" required>
+                                    <option value="" data-i18n="role_select">Rol Seç...</option>
+                                    <option value="admin" data-i18n="role_admin">Admin</option>
+                                    <option value="teacher" data-i18n="role_teacher">Öğretmen</option>
+                                    <option value="student" data-i18n="role_student">Öğrenci</option>
+                                </select>
+                            </div>
+                            <div class="grid">
+                                <input type="text" id="nuNo" data-i18n-placeholder="student_no_placeholder" placeholder="Öğrenci Numarası (Sadece Öğrenciler İçin)">
+                                <select id="nuGender">
+                                    <option value="" data-i18n="gender_unspecified">Cinsiyet (Belirtilmedi)</option>
+                                    <option value="male" data-i18n="gender_male">Erkek</option>
+                                    <option value="female" data-i18n="gender_female">Kız</option>
+                                </select>
+                            </div>
+                            <button type="submit" style="margin-bottom: 0;" data-i18n="btn_add">Ekle</button>
+                        </form>
+                    </article>
+                    
+                    <article>
+                        <header><strong data-i18n="bulk_add">CSV ile Toplu Kullanıcı Ekle</strong></header>
+                        <form id="csvImportForm">
+                            <label for="csvRole">
+                                <span data-i18n="role_to_add">Eklenecek Rol</span>
+                                <small style="display:block; color:var(--pico-muted-color); font-weight:normal;" data-i18n="csv_role_hint">CSV'deki tüm satırlara bu rol atanır.</small>
+                            </label>
+                            <select id="csvRole" required>
+                                <option value="student" data-i18n="role_student">Öğrenci</option>
+                                <option value="teacher" data-i18n="role_teacher">Öğretmen</option>
+                            </select>
+                            <label for="csvFile" data-i18n="csv_file">CSV Dosyası</label>
+                            <input type="file" id="csvFile" accept=".csv" required>
+                            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0;">
+                                <button type="submit" style="margin-bottom: 0; flex:1; min-width:120px;" class="secondary" data-i18n="btn_import">İçe Aktar</button>
+                                <button type="button" id="downloadCsvTemplateBtn" class="outline" style="margin-bottom:0; width:auto;" title="Örnek CSV şablonunu indir">
+                                    <i class="ph ph-download-simple"></i> <span data-i18n="csv_template_download">Örnek CSV İndir</span>
+                                </button>
+                            </div>
+                            <small style="display:block; color:var(--pico-muted-color); margin-top:0.4rem;">
+                                <span data-i18n="csv_format_hint_v2">Sütunlar:</span>
+                                <code>full_name, email, password, student_number</code>
+                                <br>
+                                <span data-i18n="csv_role_note">⓵ Rol CSV'de yer ALMAZ — yukarıdaki "Eklenecek Rol" alanından seçilir ve tüm satırlara uygulanır.</span>
+                            </small>
+                        </form>
+                    </article>
+                </div>
+
+                <hr style="margin: 2rem 0;">
+
+                <h3 data-i18n="user_list">Kullanıcı Listesi</h3>
+
+                <!-- Bulk toolbar — seçim varsa butonlar aktif -->
+                <div id="usersToolbar" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; margin-bottom:0.75rem; padding:0.5rem 0.75rem; border:1px solid var(--pico-muted-border-color); border-radius:8px; background:var(--pico-card-background-color);">
+                    <label style="display:flex; align-items:center; gap:0.5rem; margin:0; cursor:pointer;">
+                        <input type="checkbox" id="selectAllUsersCb" style="margin:0;">
+                        <span style="font-size:0.85rem;"><span id="selectedUserCount">0</span> <span data-i18n="bulk_selected">seçili</span></span>
+                    </label>
+                    <div style="flex:1;"></div>
+                    <button id="bulkDeleteUsersBtn" class="btn-danger" style="width:auto; margin:0; padding:0.35rem 0.8rem;" disabled>
+                        <i class="ph ph-trash"></i> <span data-i18n="bulk_delete">Seçilenleri Sil</span>
+                    </button>
+                </div>
+
+                <div class="filter-group">
+                    <button class="primary" data-filter="all" data-i18n="filter_all">Tümü</button>
+                    <button class="secondary outline" data-filter="admin" data-i18n="role_admin">Admin</button>
+                    <button class="secondary outline" data-filter="teacher" data-i18n="role_teacher">Öğretmen</button>
+                    <button class="secondary outline" data-filter="student" data-i18n="role_student">Öğrenci</button>
+                </div>
+
+                <div class="search-container">
+                    <i class="ph ph-magnifying-glass"></i>
+                    <input type="search" id="userSearchInput" data-i18n-placeholder="search_user" placeholder="İsim veya e-posta ile ara...">
+                </div>
+
+                        <figure><div class="overflow-auto">
+                    <table role="grid">
+                        <thead>
+                            <tr>
+                                <th class="select-col" style="width:32px;"></th>
+                                <th data-i18n="th_name">Ad Soyad</th>
+                                <th data-i18n="th_email">E-Posta</th>
+                                <th data-i18n="th_role">Rol</th>
+                                <th data-i18n="gender">Cinsiyet</th>
+                                <th data-i18n="th_student_no">Öğrenci No</th>
+                                <th data-i18n="th_action">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <tr><td colspan="7" data-i18n="loading">Yükleniyor...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Sınıflar -->
+            <div id="classes" class="section-content">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+                    <h2 data-i18n="nav_classes" style="margin:0;">Sınıflar</h2>
+                    <button class="filter-toggle outline secondary" data-target-panel="classesFilters" style="width:auto; margin:0; padding:0.35rem 0.8rem;">
+                        <i class="ph ph-funnel"></i> <span data-i18n="filters_toggle">Filtreler</span>
+                    </button>
+                </div>
+                <div id="classesFilters" class="filter-panel" style="display:none; padding:0.75rem; border:1px solid var(--pico-muted-border-color); border-radius:8px; margin:0.75rem 0;">
+                    <div class="search-container" style="margin:0; max-width:none;">
+                        <i class="ph ph-magnifying-glass"></i>
+                        <input type="search" id="classSearchInput" placeholder="Sınıf adı / öğretmen adı...">
+                    </div>
+                </div>
+                <div class="overflow-auto">
+                    <table role="grid" id="classesTable">
+                        <thead>
+                            <tr>
+                                <th class="sortable-th" data-sort-key="name" onclick="sortAdminTable('classes','name')"><span data-i18n="class_name">Sınıf Adı</span><span class="sort-ind"></span></th>
+                                <th class="sortable-th" data-sort-key="count" onclick="sortAdminTable('classes','count')"><span data-i18n="th_student_count">Öğrenci Sayısı</span><span class="sort-ind"></span></th>
+                                <th class="sortable-th" data-sort-key="teacher" onclick="sortAdminTable('classes','teacher')"><span data-i18n="th_teacher">Öğretmen</span><span class="sort-ind"></span></th>
+                                <th data-i18n="th_action">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="classesTableBody">
+                            <tr><td colspan="4" data-i18n="loading">Yükleniyor...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Sınavlar -->
+            <div id="exams" class="section-content">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+                    <h2 data-i18n="nav_exams" style="margin:0;">Sınavlar</h2>
+                    <button class="filter-toggle outline secondary" data-target-panel="examsFilters" style="width:auto; margin:0; padding:0.35rem 0.8rem;">
+                        <i class="ph ph-funnel"></i> <span data-i18n="filters_toggle">Filtreler</span>
+                    </button>
+                </div>
+                <div id="examsFilters" class="filter-panel" style="display:none; padding:0.75rem; border:1px solid var(--pico-muted-border-color); border-radius:8px; margin:0.75rem 0;">
+                    <div class="search-container" style="margin:0; max-width:none;">
+                        <i class="ph ph-magnifying-glass"></i>
+                        <input type="search" id="examSearchInput" placeholder="Sınav adı / sınıf adı...">
+                    </div>
+                </div>
+                <div class="overflow-auto">
+                    <table role="grid" id="examsTable">
+                        <thead>
+                            <tr>
+                                <th class="sortable-th" data-sort-key="name" onclick="sortAdminTable('exams','name')"><span data-i18n="exam_name">Sınav Adı</span><span class="sort-ind"></span></th>
+                                <th class="sortable-th" data-sort-key="class" onclick="sortAdminTable('exams','class')"><span data-i18n="class_name">Sınıf</span><span class="sort-ind"></span></th>
+                                <th class="sortable-th" data-sort-key="qcount" onclick="sortAdminTable('exams','qcount')"><span data-i18n="th_qcount">Soru</span><span class="sort-ind"></span></th>
+                                <th class="sortable-th" data-sort-key="status" onclick="sortAdminTable('exams','status')"><span data-i18n="th_status">Durum</span><span class="sort-ind"></span></th>
+                                <th data-i18n="th_action">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="examsTableBody">
+                            <tr><td colspan="5" data-i18n="loading">Yükleniyor...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Şablonlar -->
+            <div id="templates" class="section-content">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+                    <h2 data-i18n="tpl_title" style="margin:0;">Optik Form Şablonları</h2>
+                    <button class="outline" disabled style="width:auto; margin:0; padding:0.35rem 0.8rem;" title="Yakında">
+                        <i class="ph ph-plus"></i> <span data-i18n="tpl_add_new">Yeni Şablon Ekle</span>
+                        <small style="margin-left:0.4rem; opacity:0.7;" data-i18n="coming_soon">(Yakında)</small>
+                    </button>
+                </div>
+                <div class="overflow-auto" style="margin-top:0.75rem;">
+                    <table role="grid" id="templatesTable">
+                        <thead>
+                            <tr>
+                                <th class="sortable-th" data-sort-key="name" onclick="sortAdminTable('templates','name')"><span data-i18n="th_tpl_name">Şablon Adı</span><span class="sort-ind"></span></th>
+                                <th data-i18n="th_desc">Açıklama</th>
+                                <th class="sortable-th" data-sort-key="qcount" onclick="sortAdminTable('templates','qcount')"><span data-i18n="th_qcount">Soru Sayısı</span><span class="sort-ind"></span></th>
+                                <th data-i18n="th_status">Durum</th>
+                                <th data-i18n="th_action">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="templatesTableBody">
+                            <tr><td colspan="5" data-i18n="loading">Yükleniyor...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Denetim Kaydı -->
+            <div id="audit" class="section-content">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+                    <h2 data-i18n="audit_title" style="margin:0;">Denetim Kaydı</h2>
+                    <button class="filter-toggle outline secondary" data-target-panel="auditFilters" style="width:auto; margin:0; padding:0.35rem 0.8rem;">
+                        <i class="ph ph-funnel"></i> <span data-i18n="filters_toggle">Filtreler</span>
+                    </button>
+                </div>
+                <div id="auditFilters" class="filter-panel" style="display:none; padding:0.75rem; border:1px solid var(--pico-muted-border-color); border-radius:8px; margin:0.75rem 0;">
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:0.5rem;">
+                        <input type="search" id="auditSearchInput" placeholder="Aksiyon / kullanıcı / e-posta...">
+                        <select id="auditActionFilter">
+                            <option value="" data-i18n="all_actions">Tüm aksiyonlar</option>
+                            <option value="user.create">user.create</option>
+                            <option value="user.delete">user.delete</option>
+                            <option value="user.password_reset">user.password_reset</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="overflow-auto">
+                    <table role="grid" id="auditTable">
+                        <thead>
+                            <tr>
+                                <th class="sortable-th" data-sort-key="date" onclick="sortAdminTable('audit','date')"><span data-i18n="th_date">Tarih</span><span class="sort-ind"></span></th>
+                                <th data-i18n="audit_actor">Yapan</th>
+                                <th class="sortable-th" data-sort-key="action" onclick="sortAdminTable('audit','action')"><span data-i18n="audit_action">Aksiyon</span><span class="sort-ind"></span></th>
+                                <th data-i18n="audit_target">Hedef</th>
+                                <th data-i18n="audit_summary">Özet</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auditTableBody">
+                            <tr><td colspan="5" data-i18n="loading">Yükleniyor...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script type="module">
+        import { requireAuth, logout, getName, apiFetch, USE_MOCK, t } from './auth.js?v=2';
+
+        // --- Toast Bildirim Sistemi ---
+        const toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container';
+        document.body.appendChild(toastContainer);
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            const icons = { success: 'ph-check-circle', error: 'ph-x-circle', info: 'ph-info', warning: 'ph-warning' };
+            toast.innerHTML = `<i class="ph ${icons[type] || icons.info}"></i> ${message}`;
+            toastContainer.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('toast-hide');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // 1. Yetki Kontrolü
+        requireAuth(['admin']);
+
+        // 2. Navbar Bilgileri
+        function updateUserNameDisplay() {
+            document.getElementById('userNameDisplay').textContent = t('role_admin') + ': ' + (getName() || 'Yönetici');
+        }
+        updateUserNameDisplay();
+        window.addEventListener('languageChanged', () => {
+            updateUserNameDisplay();
+            renderUsers(); // Update dynamically rendered text
+            loadTemplates();
+        });
+
+        document.getElementById('logoutBtn').addEventListener('click', logout);
+        
+        // 3. Sekme Geçiş Mantığı
+        const menuLinks = document.querySelectorAll('.menu a');
+        const sections = document.querySelectorAll('.section-content');
+
+        function switchTab(targetId) {
+            menuLinks.forEach(l => l.classList.remove('active'));
+            sections.forEach(s => s.classList.remove('active'));
+            
+            const link = document.querySelector(`.menu a[data-target="${targetId}"]`);
+            if (link) link.classList.add('active');
+            
+            const section = document.getElementById(targetId);
+            if (section) section.classList.add('active');
+            
+            if (targetId === 'users') loadUsers();
+            if (targetId === 'templates') loadTemplates();
+            if (targetId === 'classes') loadAdminClasses();
+            if (targetId === 'exams') loadAdminExams();
+            if (targetId === 'audit') loadAdminAudit();
+        }
+
+        menuLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                switchTab(link.getAttribute('data-target'));
+                // Mobilde tıklanınca menüyü kapat
+                if (window.innerWidth <= 768) {
+                    document.querySelector('.sidebar').classList.remove('mobile-open');
+                    const _ov = document.getElementById('sidebarOverlay');
+                    if (_ov) _ov.classList.remove('active');
+                }
+            });
+        });
+
+        // Hamburger Menü Toggle
+        window.closeMobileSidebar = function() {
+            const sb = document.querySelector('.sidebar');
+            const ov = document.getElementById('sidebarOverlay');
+            if (sb) sb.classList.remove('mobile-open');
+            if (ov) ov.classList.remove('active');
+        };
+        document.getElementById('mobileMenuBtn').addEventListener('click', () => {
+            const _sb = document.querySelector('.sidebar');
+            const _ov = document.getElementById('sidebarOverlay');
+            const _open = _sb.classList.toggle('mobile-open');
+            if (_ov) _ov.classList.toggle('active', _open);
+        });
+
+        // Ekran büyüyünce admin panelinde kullanıcı adını göster
+        if (window.innerWidth > 768) {
+            document.getElementById('userNameDisplay').style.display = 'inline';
+        }
+
+        // --- Bölüm 1: Kullanıcılar ---
+        let currentFilter = 'all';
+        let currentSearchQuery = '';
+        let allUsers = [];
+
+        function showSkeleton(tbodyId, columns) {
+            const tbody = document.getElementById(tbodyId);
+            let html = '';
+            for(let i=0; i<3; i++) {
+                html += '<tr>';
+                for(let j=0; j<columns; j++) {
+                    html += `<td><span class="skeleton"></span></td>`;
+                }
+                html += '</tr>';
+            }
+            tbody.innerHTML = html;
+        }
+
+        async function loadUsers() {
+            showSkeleton('usersTableBody', 5);
+            try {
+                if (USE_MOCK) {
+                    if (allUsers.length === 0) {
+                        await new Promise(r => setTimeout(r, 400));
+                        const storedUsers = localStorage.getItem('omr_mock_users');
+                        if (storedUsers) {
+                            allUsers = JSON.parse(storedUsers);
+                        } else {
+                            allUsers = await apiFetch('/api/users', {}, './mock-api/users.json');
+                            localStorage.setItem('omr_mock_users', JSON.stringify(allUsers));
+                        }
+                    }
+                } else {
+                    allUsers = await apiFetch('/api/users', {}, './mock-api/users.json');
+                }
+                renderUsers();
+            } catch (e) {
+                document.getElementById('usersTableBody').innerHTML = `<tr><td colspan="5" class="empty-state"><i class="ph ph-warning-circle"></i>${t('msg_users_fail')}</td></tr>`;
+            }
+        }
+
+        function renderUsers() {
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+            
+            let filtered = currentFilter === 'all' 
+                ? allUsers 
+                : allUsers.filter(u => u.role === currentFilter);
+                
+            if (currentSearchQuery) {
+                const q = currentSearchQuery.toLowerCase();
+                filtered = filtered.filter(u => 
+                    u.full_name.toLowerCase().includes(q) || 
+                    u.email.toLowerCase().includes(q)
+                );
+            }
+                
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="empty-state"><i class="ph ph-users-slash"></i>${t('msg_no_user')}</td></tr>`;
+                _refreshUsersBulkState();
+                return;
+            }
+
+            filtered.forEach(user => {
+                let roleClass = 'role-student';
+                let roleName = t('role_student');
+                if (user.role === 'admin') { roleClass = 'role-admin'; roleName = t('role_admin'); }
+                else if (user.role === 'teacher') { roleClass = 'role-teacher'; roleName = t('role_teacher'); }
+
+                tbody.innerHTML += `
+                    <tr id="user-row-${user.id}">
+                        <td class="select-col" style="width:32px;"><input type="checkbox" class="user-select-cb" data-id="${user.id}" data-role="${user.role}" style="margin:0;"></td>
+                        <td>${user.full_name}</td>
+                        <td>${user.email}</td>
+                        <td><span class="role-badge ${roleClass}">${roleName}</span></td>
+                        <td>${user.gender === 'male' ? '👨 ' + t('gender_male') : user.gender === 'female' ? '👩 ' + t('gender_female') : '<span style="color:var(--pico-muted-color);">—</span>'}</td>
+                        <td>${user.student_number || '-'}</td>
+                        <td style="white-space:nowrap;">
+                            <button class="outline" style="padding: 0.15rem 0.5rem; width: auto; margin:0 0.25rem 0 0;" title="${t('btn_edit')}" onclick="openEditUserModal(${user.id})">
+                                <i class="ph ph-pencil-simple"></i>
+                            </button>
+                            <button class="outline secondary" style="padding: 0.15rem 0.5rem; width: auto; margin:0 0.25rem 0 0;" title="${t('pwd_reset_title')}" onclick="resetUserPassword(${user.id}, '${(user.full_name || user.email).replace(/'/g, "\\'")}')">
+                                <i class="ph ph-key"></i>
+                            </button>
+                            <button class="btn-danger" style="padding: 0.15rem 0.5rem; width: auto; margin:0;" onclick="deleteUser(${user.id})" title="${t('btn_delete')}">
+                                <i class="ph ph-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            // Checkbox event'lerini bağla
+            document.querySelectorAll('.user-select-cb').forEach(cb => {
+                cb.addEventListener('change', _refreshUsersBulkState);
+            });
+            _refreshUsersBulkState();
+        }
+
+        // ── Bulk seçim toolbar
+        function _selectedUserIds() {
+            return Array.from(document.querySelectorAll('.user-select-cb:checked')).map(cb => parseInt(cb.dataset.id, 10));
+        }
+        function _refreshUsersBulkState() {
+            const sel = _selectedUserIds();
+            document.getElementById('selectedUserCount').textContent = sel.length;
+            document.getElementById('bulkDeleteUsersBtn').disabled = sel.length === 0;
+            const all = document.querySelectorAll('.user-select-cb');
+            const master = document.getElementById('selectAllUsersCb');
+            if (all.length === 0) { master.checked = false; master.indeterminate = false; }
+            else if (sel.length === all.length) { master.checked = true; master.indeterminate = false; }
+            else if (sel.length === 0) { master.checked = false; master.indeterminate = false; }
+            else { master.checked = false; master.indeterminate = true; }
+        }
+        document.getElementById('selectAllUsersCb').addEventListener('change', e => {
+            document.querySelectorAll('.user-select-cb').forEach(cb => { cb.checked = e.target.checked; });
+            _refreshUsersBulkState();
+        });
+        document.getElementById('bulkDeleteUsersBtn').addEventListener('click', async () => {
+            const ids = _selectedUserIds();
+            if (ids.length === 0) return;
+            if (!confirm(t('bulk_delete_confirm').replace('{n}', ids.length))) return;
+            try {
+                const r = await apiFetch('/api/users/bulk-delete', {
+                    method: 'POST',
+                    body: JSON.stringify({ ids }),
+                });
+                showToast(t('bulk_delete_success').replace('{n}', r.deleted ?? ids.length), 'success');
+                await loadUsers();
+            } catch (err) {
+                showToast((err.message || err), 'error');
+            }
+        });
+
+        // Filtreleme butonları event'i
+        document.querySelectorAll('.filter-group button').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // Renkleri sıfırla
+                document.querySelectorAll('.filter-group button').forEach(b => {
+                    b.classList.add('secondary');
+                    b.classList.remove('primary');
+                });
+                // Tıklananı aktif et
+                e.target.classList.remove('secondary');
+                
+                currentFilter = e.target.getAttribute('data-filter');
+                renderUsers();
+            });
+        });
+
+        // Arama Event'i
+        document.getElementById('userSearchInput').addEventListener('input', (e) => {
+            currentSearchQuery = e.target.value;
+            renderUsers();
+        });
+
+        // ─── Düzenle Modal'ı aç ───
+        window.openEditUserModal = function(id) {
+            const user = allUsers.find(u => u.id === id);
+            if (!user) return;
+            document.getElementById('euId').value = user.id;
+            document.getElementById('euName').value = user.full_name || '';
+            document.getElementById('euEmail').value = user.email || '';
+            document.getElementById('euRole').value = user.role || 'student';
+            document.getElementById('euSn').value = user.student_number || '';
+            document.getElementById('euGender').value = user.gender || '';
+            document.getElementById('editUserModal').setAttribute('open', 'true');
+        };
+        document.getElementById('editUserForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = parseInt(document.getElementById('euId').value, 10);
+            const payload = {
+                full_name: document.getElementById('euName').value.trim(),
+                email: document.getElementById('euEmail').value.trim(),
+                role: document.getElementById('euRole').value,
+                student_number: document.getElementById('euSn').value.trim() || null,
+                gender: document.getElementById('euGender').value || null,
+            };
+            try {
+                const updated = await apiFetch(`/api/users/${id}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify(payload),
+                });
+                // Cache'i güncelle
+                const idx = allUsers.findIndex(u => u.id === id);
+                if (idx >= 0) allUsers[idx] = { ...allUsers[idx], ...updated };
+                renderUsers();
+                showToast(t('edit_user_success'), 'success');
+                document.getElementById('editUserModal').removeAttribute('open');
+            } catch (err) {
+                showToast((err.message || err), 'error');
+            }
+        });
+
+        // ─── Şifre sıfırla (admin → herhangi bir kullanıcı için) ───
+        window.resetUserPassword = async function(id, label) {
+            // Rastgele şifre üret
+            const chars = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let pwd = ''; for (let i = 0; i < 10; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
+
+            const confirmMsg = t('pwd_reset_confirm').replace('{name}', label).replace('{pwd}', pwd);
+            if (!confirm(confirmMsg)) return;
+            try {
+                await apiFetch(`/api/users/${id}/password`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ password: pwd }),
+                });
+                // Şifre tahtaya kopyalansın
+                try { await navigator.clipboard.writeText(pwd); } catch {}
+                alert(t('pwd_reset_success').replace('{name}', label).replace('{pwd}', pwd));
+            } catch (err) {
+                showToast(t('pwd_reset_failed') + ': ' + (err.message || err), 'error');
+            }
+        };
+
+        // Global silme fonksiyonu
+        window.deleteUser = async function(id) {
+            if (!confirm(t('confirm_del'))) return;
+            
+            try {
+                await apiFetch(`/api/users/${id}`, { method: 'DELETE' }, './mock-api/users.json');
+                allUsers = allUsers.filter(u => u.id !== id);
+                if (USE_MOCK) {
+                    localStorage.setItem('omr_mock_users', JSON.stringify(allUsers));
+                }
+                renderUsers();
+                showToast(t('msg_user_del'), 'success');
+            } catch (err) {
+                showToast(t('msg_del_fail'), 'error');
+            }
+        };
+
+        // ─── Şifre alanı yardımcıları (göster/gizle + rastgele üret) ───
+        document.getElementById('nuPassToggle').addEventListener('click', () => {
+            const inp = document.getElementById('nuPass');
+            const ico = document.querySelector('#nuPassToggle i');
+            if (inp.type === 'password') {
+                inp.type = 'text';
+                ico.className = 'ph ph-eye-slash';
+            } else {
+                inp.type = 'password';
+                ico.className = 'ph ph-eye';
+            }
+        });
+        document.getElementById('nuPassRandom').addEventListener('click', () => {
+            // 10 karakter (harf + rakam) rastgele şifre
+            const chars = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let pwd = '';
+            for (let i = 0; i < 10; i++) {
+                pwd += chars[Math.floor(Math.random() * chars.length)];
+            }
+            const inp = document.getElementById('nuPass');
+            inp.value = pwd;
+            inp.type = 'text';                  // göster ki kullanıcı kopyalayabilsin
+            document.querySelector('#nuPassToggle i').className = 'ph ph-eye-slash';
+            // Kopyala buton hint'i
+            try { navigator.clipboard.writeText(pwd); showToast(t('pwd_random_copied'), 'success'); } catch {}
+        });
+
+        // Yeni Kullanıcı Ekleme
+        document.getElementById('newUserForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('nuName').value;
+            const email = document.getElementById('nuEmail').value;
+            const password = document.getElementById('nuPass').value;
+            const role = document.getElementById('nuRole').value;
+            const stNo = document.getElementById('nuNo').value;
+            const gender = document.getElementById('nuGender').value || null;
+
+            try {
+                const payload = {
+                    full_name: name,
+                    email: email,
+                    password: password,
+                    role: role,
+                    student_number: stNo || null,
+                    gender,
+                };
+                
+                const createdUser = await apiFetch('/api/users', { 
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                }, './mock-api/users.json');
+                
+                if (USE_MOCK) {
+                    const mockUser = {
+                        id: Date.now(),
+                        full_name: name,
+                        email: email,
+                        role: role,
+                        student_number: stNo || null
+                    };
+                    allUsers.push(mockUser);
+                    localStorage.setItem('omr_mock_users', JSON.stringify(allUsers));
+                } else {
+                    allUsers.push(createdUser);
+                }
+                
+                renderUsers();
+                showToast(t('msg_user_add'), 'success');
+                document.getElementById('newUserForm').reset();
+            } catch (err) {
+                showToast(t('msg_add_fail'), 'error');
+            }
+        });
+
+        // CSV Import
+        document.getElementById('csvImportForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fileInput = document.getElementById('csvFile');
+            const roleSelect = document.getElementById('csvRole').value;
+            if (fileInput.files.length === 0) return;
+            
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            
+            try {
+                if (USE_MOCK) {
+                    showToast(t('msg_csv_ok'), 'success');
+                    document.getElementById('csvImportForm').reset();
+                    loadUsers();
+                } else {
+                    const formData = new FormData();
+                    formData.append('file', fileInput.files[0]);
+                    formData.append('role', roleSelect);
+                    
+                    await apiFetch(`/api/users/import?role=${roleSelect}`, {
+                        method: 'POST',
+                        body: formData
+                    }, './mock-api/users.json');
+                    
+                    showToast(t('msg_csv_ok'), 'success');
+                    document.getElementById('csvImportForm').reset();
+                    allUsers = []; // Clear list to force refetch
+                    loadUsers();
+                }
+            } catch (err) {
+                showToast('CSV yükleme başarısız oldu.', 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        // --- Bölüm 2: Şablonlar ---
+        // (eski loadTemplates kaldırıldı — aşağıda yeni sortable versiyon tanımlı)
+        let loadTemplates = async function() {};
+
+        // (loadAdminClasses / loadAdminExams artık aşağıda yeni sortable+filter destekli versiyonla tanımlı)
+
+        // ─── CSV şablon indir ────────────────────────────────────────────────────
+        document.getElementById('downloadCsvTemplateBtn').addEventListener('click', () => {
+            const selectedRole = document.getElementById('csvRole').value || 'student';
+            const roleLabel = selectedRole === 'teacher' ? t('role_teacher') : t('role_student');
+            const BOM = "﻿"; // Excel için Türkçe UTF-8 BOM
+            // İlk satırlar yorum/açıklama — Excel "data row" değil; backend # ile başlayanları atlar
+            // (backend buna eklenmeli — şimdilik kullanıcı bu satırları manuel silsin)
+            const lines = [
+                `# OMR kullanıcı toplu içe aktarma şablonu`,
+                `# Bu satırları (# ile başlayanları) içe aktarmadan önce silin.`,
+                `# Yüklerken seçtiğiniz "Rol" tüm satırlara uygulanır.`,
+                `# Şu an seçili rol: ${roleLabel} (${selectedRole})`,
+                `# Sütunlar: full_name, email, password, student_number (öğretmen için bu kolonu boş bırakabilirsiniz)`,
+                `full_name,email,password,student_number`,
+                selectedRole === 'student'
+                    ? 'Ahmet Yılmaz,ahmet@omr.local,gecici123,2420171001'
+                    : 'Mehmet Demir,mehmet.hoca@omr.local,gecici123,',
+                selectedRole === 'student'
+                    ? 'Ayşe Kaya,ayse@omr.local,gecici123,2420171002'
+                    : 'Selin Arslan,selin.hoca@omr.local,gecici123,',
+                selectedRole === 'student'
+                    ? 'Fatma Demir,fatma@omr.local,gecici123,2420171003'
+                    : 'Burak Şahin,burak.hoca@omr.local,gecici123,',
+            ];
+            const blob = new Blob([BOM + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `kullanici_sablonu_${selectedRole}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast(t('csv_template_downloaded'), 'success');
+        });
+
+        // ─── Filtreler toggle (collapsible) ──────────────────────────────────────
+        document.querySelectorAll('.filter-toggle').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const panel = document.getElementById(btn.dataset.targetPanel);
+                if (!panel) return;
+                const open = panel.style.display !== 'none';
+                panel.style.display = open ? 'none' : 'block';
+                btn.classList.toggle('contrast', !open);
+            });
+        });
+
+        // ─── Universal admin tablo sıralama ──────────────────────────────────────
+        const _adminSort = { classes: {}, exams: {}, templates: {}, audit: {} };
+        let _adminData = { classes: [], exams: [], templates: [], audit: [] };
+
+        window.sortAdminTable = function(table, key) {
+            const cur = _adminSort[table];
+            if (cur.key === key) cur.dir = cur.dir === 'asc' ? 'desc' : 'asc';
+            else { cur.key = key; cur.dir = 'asc'; }
+            // Re-render
+            if (table === 'classes')   renderAdminClasses();
+            else if (table === 'exams') renderAdminExams();
+            else if (table === 'templates') renderAdminTemplates();
+            else if (table === 'audit') renderAdminAudit();
+        };
+
+        function _sortArray(arr, key, dir, accessor) {
+            const sign = dir === 'desc' ? -1 : 1;
+            return [...arr].sort((a, b) => {
+                const va = accessor(a, key), vb = accessor(b, key);
+                if (va == null && vb == null) return 0;
+                if (va == null) return 1;
+                if (vb == null) return -1;
+                if (va < vb) return -1 * sign;
+                if (va > vb) return  1 * sign;
+                return 0;
+            });
+        }
+        function _updateSortInds(tableId, sortState) {
+            document.querySelectorAll(`#${tableId} .sort-ind`).forEach(el => el.innerHTML = '');
+            if (!sortState.key) return;
+            const th = document.querySelector(`#${tableId} th[data-sort-key="${sortState.key}"] .sort-ind`);
+            if (th) th.innerHTML = sortState.dir === 'asc'
+                ? ' <i class="ph ph-caret-up" style="font-size:0.7em;"></i>'
+                : ' <i class="ph ph-caret-down" style="font-size:0.7em;"></i>';
+        }
+
+        // ─── Sınıflar ────────────────────────────────────────────────────────────
+        const _classSearch = () => (document.getElementById('classSearchInput')?.value || '').toLowerCase();
+        function renderAdminClasses() {
+            const tbody = document.getElementById('classesTableBody');
+            const q = _classSearch();
+            const filtered = _adminData.classes.filter(c =>
+                !q || (c.name || '').toLowerCase().includes(q) || (c.teacher_name || '').toLowerCase().includes(q)
+            );
+            const s = _adminSort.classes;
+            const sorted = s.key
+                ? _sortArray(filtered, s.key, s.dir, (r, k) => {
+                    if (k === 'name') return (r.name || '').toLowerCase();
+                    if (k === 'count') return r.student_count ?? 0;
+                    if (k === 'teacher') return (r.teacher_name || '').toLowerCase();
+                  })
+                : filtered;
+            _updateSortInds('classesTable', s);
+            if (sorted.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="empty-state"><i class="ph ph-users-three"></i>${t('no_records')}</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = sorted.map(c => `
+                <tr>
+                    <td><strong>${c.name}</strong></td>
+                    <td>${c.student_count || 0}</td>
+                    <td>${c.teacher_name || (c.teacher_id ? '#' + c.teacher_id : '-')}</td>
+                    <td><button class="outline secondary" style="padding:0.2rem 0.5rem; width:auto; margin:0;" disabled title="${t('coming_soon')}">${t('btn_detail')}</button></td>
+                </tr>
+            `).join('');
+        }
+        async function loadAdminClasses() {
+            showSkeleton('classesTableBody', 4);
+            try {
+                _adminData.classes = await apiFetch('/api/classes', {}, './mock-api/classes.json') || [];
+                renderAdminClasses();
+            } catch (err) {
+                document.getElementById('classesTableBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--pico-del-color);">${err.message || 'Hata oluştu'}</td></tr>`;
+            }
+        }
+        document.getElementById('classSearchInput')?.addEventListener('input', renderAdminClasses);
+
+        // ─── Sınavlar ───────────────────────────────────────────────────────────
+        const _examSearch = () => (document.getElementById('examSearchInput')?.value || '').toLowerCase();
+        function renderAdminExams() {
+            const tbody = document.getElementById('examsTableBody');
+            const q = _examSearch();
+            const filtered = _adminData.exams.filter(e =>
+                !q || (e.name || '').toLowerCase().includes(q) || (e.class_name || '').toLowerCase().includes(q)
+            );
+            const s = _adminSort.exams;
+            const sorted = s.key
+                ? _sortArray(filtered, s.key, s.dir, (r, k) => {
+                    if (k === 'name') return (r.name || '').toLowerCase();
+                    if (k === 'class') return (r.class_name || String(r.class_id ?? '')).toLowerCase();
+                    if (k === 'qcount') return r.question_count ?? 0;
+                    if (k === 'status') return r.is_active ? 1 : 0;
+                  })
+                : filtered;
+            _updateSortInds('examsTable', s);
+            if (sorted.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="empty-state"><i class="ph ph-exam"></i>${t('no_records')}</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = sorted.map(e => `
+                <tr>
+                    <td><strong>${e.name}</strong></td>
+                    <td>${e.class_name || (e.class_id ? '#' + e.class_id : '-')}</td>
+                    <td>${e.question_count ?? '-'}</td>
+                    <td>${e.is_active ? '<ins>' + t('status_active') + '</ins>' : '<del>' + t('status_passive') + '</del>'}</td>
+                    <td style="white-space:nowrap;">
+                        <button class="btn-danger" style="padding:0.2rem 0.5rem; width:auto; margin:0;" title="${t('btn_delete')}" onclick="deleteAdminExam(${e.id}, '${(e.name||'').replace(/'/g, "\\'")}')">
+                            <i class="ph ph-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        async function loadAdminExams() {
+            showSkeleton('examsTableBody', 5);
+            try {
+                _adminData.exams = await apiFetch('/api/exams', {}, './mock-api/exams.json') || [];
+                renderAdminExams();
+            } catch (err) {
+                document.getElementById('examsTableBody').innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--pico-del-color);">${err.message || 'Hata oluştu'}</td></tr>`;
+            }
+        }
+        document.getElementById('examSearchInput')?.addEventListener('input', renderAdminExams);
+
+        // ─── Admin sınav silme — 409 (etkilenen sonuç var) yakala ve force ile tekrar dene
+        window.deleteAdminExam = async function(examId, examName) {
+            // İlk deneme — force=false
+            try {
+                await apiFetch(`/api/exams/${examId}`, { method: 'DELETE' });
+                showToast(`"${examName}" silindi.`, 'success');
+                await loadAdminExams();
+                return;
+            } catch (err) {
+                // FastAPI hata formatı: detail bir obje olabilir veya string
+                const detail = err.detail || (typeof err.message === 'string' ? err.message : err);
+                // 409: bağlı sonuç var
+                let parsed = null;
+                try { parsed = JSON.parse(detail); } catch {}
+                let affected = null;
+                if (parsed && typeof parsed === 'object' && parsed.affected_results != null) {
+                    affected = parsed.affected_results;
+                } else {
+                    // err.message JSON-encoded "{'affected_results': N, ...}" şeklinde olabilir
+                    const m = String(detail).match(/affected_results['"]?\s*:\s*(\d+)/);
+                    if (m) affected = parseInt(m[1], 10);
+                }
+
+                if (affected != null) {
+                    const msg = t('exam_delete_force_confirm')
+                        .replace('{name}', examName)
+                        .replace('{n}', affected);
+                    if (!confirm(msg)) return;
+                    try {
+                        const r = await apiFetch(`/api/exams/${examId}?force=true`, { method: 'DELETE' });
+                        showToast(t('exam_delete_force_ok').replace('{n}', r.orphaned_results || 0), 'success');
+                        await loadAdminExams();
+                    } catch (e2) {
+                        showToast((e2.message || e2), 'error');
+                    }
+                } else {
+                    showToast((err.message || err), 'error');
+                }
+            }
+        };
+
+        // ─── Şablonlar (sortable + edit placeholder) ─────────────────────────────
+        function renderAdminTemplates() {
+            const tbody = document.getElementById('templatesTableBody');
+            const s = _adminSort.templates;
+            const sorted = s.key
+                ? _sortArray(_adminData.templates, s.key, s.dir, (r, k) => {
+                    if (k === 'name') return (r.name || '').toLowerCase();
+                    if (k === 'qcount') return r.question_count ?? 0;
+                  })
+                : _adminData.templates;
+            _updateSortInds('templatesTable', s);
+            if (sorted.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="empty-state"><i class="ph ph-file-doc"></i>${t('msg_no_tpl')}</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = sorted.map(tpl => `
+                <tr>
+                    <td><strong>${tpl.name}</strong></td>
+                    <td>${tpl.description || '-'}</td>
+                    <td>${tpl.question_count}</td>
+                    <td><ins>${t('status_active')}</ins></td>
+                    <td><button class="outline secondary" style="padding:0.2rem 0.5rem; width:auto; margin:0;" disabled title="${t('coming_soon')}">${t('coming_soon')}</button></td>
+                </tr>
+            `).join('');
+        }
+        // loadTemplates — verisini cache'le, render et
+        loadTemplates = async function loadTemplatesImpl() {
+            showSkeleton('templatesTableBody', 5);
+            try {
+                _adminData.templates = await apiFetch('/api/templates', {}, './mock-api/templates.json') || [];
+                renderAdminTemplates();
+            } catch {
+                document.getElementById('templatesTableBody').innerHTML = `<tr><td colspan="5" class="empty-state"><i class="ph ph-warning-circle"></i>${t('msg_tpl_fail')}</td></tr>`;
+            }
+        };
+
+        // ─── Denetim Kaydı (Audit Log) ───────────────────────────────────────────
+        const _auditSearch = () => (document.getElementById('auditSearchInput')?.value || '').toLowerCase();
+        const _auditActionFilter = () => document.getElementById('auditActionFilter')?.value || '';
+        function renderAdminAudit() {
+            const tbody = document.getElementById('auditTableBody');
+            const q = _auditSearch();
+            const af = _auditActionFilter();
+            const filtered = _adminData.audit.filter(r =>
+                (!q || (r.action || '').toLowerCase().includes(q) || (r.actor_email || '').toLowerCase().includes(q) || (r.summary || '').toLowerCase().includes(q))
+                && (!af || r.action === af)
+            );
+            const s = _adminSort.audit;
+            const sorted = s.key
+                ? _sortArray(filtered, s.key, s.dir, (r, k) => {
+                    if (k === 'date') return r.created_at ? new Date(r.created_at).getTime() : 0;
+                    if (k === 'action') return r.action;
+                  })
+                : filtered;
+            _updateSortInds('auditTable', s);
+            if (sorted.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="empty-state"><i class="ph ph-file-magnifying-glass"></i>${t('no_records')}</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = sorted.map(r => `
+                <tr>
+                    <td>${r.created_at ? new Date(r.created_at).toLocaleString() : '-'}</td>
+                    <td>${r.actor_email || '-'} <small style="color:var(--pico-muted-color);">${r.actor_role ? '(' + r.actor_role + ')' : ''}</small></td>
+                    <td><code style="font-size:0.85em;">${r.action}</code></td>
+                    <td>${r.target_type ? r.target_type + ': ' + (r.target_id || '-') : '-'}</td>
+                    <td>${r.summary || '-'}</td>
+                </tr>
+            `).join('');
+        }
+        async function loadAdminAudit() {
+            showSkeleton('auditTableBody', 5);
+            try {
+                const resp = await apiFetch('/api/audit?limit=200', {});
+                _adminData.audit = resp.rows || [];
+                renderAdminAudit();
+            } catch (err) {
+                document.getElementById('auditTableBody').innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--pico-del-color);">${err.message || 'Hata oluştu'}</td></tr>`;
+            }
+        }
+        document.getElementById('auditSearchInput')?.addEventListener('input', renderAdminAudit);
+        document.getElementById('auditActionFilter')?.addEventListener('change', renderAdminAudit);
+
+        // Başlangıç yüklemesi
+        loadUsers();
+
+    </script>
+
+    <!-- Profile Modal -->
+    <!-- ★ Kullanıcı Düzenle Modal -->
+    <dialog id="editUserModal">
+        <article style="max-width: 500px;">
+            <header>
+                <button aria-label="Kapat" rel="prev" style="float:right;" onclick="document.getElementById('editUserModal').removeAttribute('open')"></button>
+                <h3 style="margin:0;" data-i18n="edit_user_title">Kullanıcı Düzenle</h3>
+            </header>
+            <form id="editUserForm">
+                <input type="hidden" id="euId">
+                <label for="euName" data-i18n="th_name">Ad Soyad</label>
+                <input type="text" id="euName" required>
+
+                <label for="euEmail" data-i18n="th_email">E-Posta</label>
+                <input type="email" id="euEmail" required>
+
+                <label for="euRole" data-i18n="th_role">Rol</label>
+                <select id="euRole" required>
+                    <option value="admin" data-i18n="role_admin">Admin</option>
+                    <option value="teacher" data-i18n="role_teacher">Öğretmen</option>
+                    <option value="student" data-i18n="role_student">Öğrenci</option>
+                </select>
+
+                <label for="euSn" data-i18n="th_student_no">Öğrenci No</label>
+                <input type="text" id="euSn">
+                <small style="display:block; color:var(--pico-muted-color); margin-top:-0.5rem; margin-bottom:0.75rem;" data-i18n="edit_user_sn_hint">
+                    Sadece öğrenciler için; boş bırakabilirsiniz.
+                </small>
+
+                <label for="euGender" data-i18n="gender">Cinsiyet</label>
+                <select id="euGender">
+                    <option value="" data-i18n="gender_unspecified">Belirtilmedi</option>
+                    <option value="male" data-i18n="gender_male">Erkek</option>
+                    <option value="female" data-i18n="gender_female">Kız</option>
+                </select>
+
+                <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
+                    <button type="button" class="secondary" style="width:auto; margin:0;" onclick="document.getElementById('editUserModal').removeAttribute('open')" data-i18n="btn_cancel">İptal</button>
+                    <button type="submit" style="width:auto; margin:0;" data-i18n="btn_save">Kaydet</button>
+                </div>
+            </form>
+        </article>
+    </dialog>
+
+    <dialog id="profileModal">
+        <article style="max-width: 500px;">
+            <header>
+                <button aria-label="Close" class="close" onclick="closeProfileModal()"></button>
+                <strong data-i18n="modal_profile_title">Hesabım</strong>
+            </header>
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <!-- Cinsiyete göre avatar — emoji ile (resim yüklemesi kaldırıldı) -->
+                <div id="profileAvatar" class="avatar-container" style="width: 90px; height: 90px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 3rem; margin: 0 auto 0.75rem; background: var(--pico-primary-focus); transition: background 0.2s;">
+                    <span id="profileAvatarEmoji">🧑</span>
+                </div>
+                <!-- Cinsiyet seçici -->
+                <div style="display:flex; gap:0.5rem; justify-content:center; margin-bottom: 1rem;">
+                    <button type="button" id="genderMaleBtn" class="outline secondary" style="width:auto; margin:0; padding:0.3rem 0.8rem; font-size:0.85rem;" onclick="setProfileGender('male')">
+                        👨 <span data-i18n="gender_male">Erkek</span>
+                    </button>
+                    <button type="button" id="genderFemaleBtn" class="outline secondary" style="width:auto; margin:0; padding:0.3rem 0.8rem; font-size:0.85rem;" onclick="setProfileGender('female')">
+                        👩 <span data-i18n="gender_female">Kız</span>
+                    </button>
+                    <button type="button" id="genderClearBtn" class="outline secondary" style="width:auto; margin:0; padding:0.3rem 0.8rem; font-size:0.85rem;" onclick="setProfileGender(null)" title="Cinsiyet belirtme">
+                        🧑
+                    </button>
+                </div>
+                <h3 id="profileName" style="margin: 0;">-</h3>
+                <p id="profileRole" style="color: var(--pico-muted-color); font-size: 0.875rem; font-weight: 600; text-transform: uppercase;">-</p>
+            </div>
+            
+            <form id="changePwdForm" onsubmit="changePassword(event)">
+                <label data-i18n="current_password">Mevcut Şifre</label>
+                <input type="password" id="currentPwd" required>
+                
+                <label data-i18n="new_password">Yeni Şifre</label>
+                <input type="password" id="newPwd" required minlength="6">
+                
+                <label data-i18n="confirm_password">Yeni Şifre (Tekrar)</label>
+                <input type="password" id="confirmPwd" required minlength="6">
+                
+                <button type="submit" data-i18n="update_password" style="margin-top: 1rem;">Şifreyi Güncelle</button>
+            </form>
+        </article>
+    </dialog>
+</body>
+</html>

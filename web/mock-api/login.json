@@ -1,0 +1,8 @@
+{ 
+  "access_token": "mock.jwt.token.ogretmen", 
+  "token_type": "bearer", 
+  "role": "teacher", 
+  "full_name": "Örnek Öğretmen", 
+  "user_id": 2, 
+  "student_number": null 
+}

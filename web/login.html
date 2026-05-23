@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="OMR Optik Form Okuma Sistemi — Giriş Paneli">
+    <title>OMR Sistemi — Giriş</title>
+    <!-- Runtime config (USE_MOCK + API_BASE) — auth.js'den ÖNCE yüklenmeli -->
+    <script src="./runtime-config.js"></script>
+    <!-- Özel Stiller -->
+    <link rel="stylesheet" href="./style.css">
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="./manifest.json">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            height: 100vh;            /* Tam ekran, scroll yok */
+            overflow: hidden;          /* İç içe scroll bar oluşmasın */
+            display: flex;
+            flex-direction: column;
+            background: url('./omr-login-bg.png') center/cover no-repeat fixed;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Tema butonu (lang-toggle ile aynı görünüm, JS handler farklı) */
+        .theme-btn-login {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #ffffff;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            border-radius: 50px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            backdrop-filter: blur(10px);
+        }
+        .theme-btn-login:hover {
+            background: rgba(255,255,255,0.18);
+            transform: translateY(-1px);
+        }
+
+        .login-main {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1;                /* Kalan yüksekliği doldur — body height:100vh */
+            width: 100%;
+            position: relative;
+            padding: 1rem 0;
+            overflow-y: auto;         /* Çok küçük ekranda iç scroll, dış scroll yok */
+        }
+
+        /* ===================== SOL PANEL — İllüstrasyon ===================== */
+        .login-left {
+            display: none; /* Centered tasarım için gizlendi */
+        }
+
+        .login-left::before {
+            content: '';
+            position: absolute;
+            top: -15%;
+            left: -10%;
+            width: 50%;
+            height: 50%;
+            background: radial-gradient(circle, rgba(46, 158, 110, 0.08) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .login-left::after {
+            content: '';
+            position: absolute;
+            bottom: -10%;
+            right: -5%;
+            width: 40%;
+            height: 40%;
+            background: radial-gradient(circle, rgba(74, 144, 164, 0.06) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .illustration-container {
+            position: relative;
+            z-index: 1;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .illustration-container img {
+            width: 100%;
+            height: auto;
+            filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.08));
+            animation: floatUp 6s ease-in-out infinite;
+        }
+
+        @keyframes floatUp {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-12px); }
+        }
+
+        .illustration-text {
+            margin-top: 2rem;
+            color: #3a5a6e;
+            font-size: 0.95rem;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            opacity: 0.85;
+        }
+
+        /* ===================== SAĞ PANEL — Login Formu ===================== */
+        .login-right {
+            width: 100%;
+            max-width: 450px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1.75rem;          /* Kompakt — viewport sığması için */
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 20px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            position: relative;
+            z-index: 2;
+        }
+
+        .login-form-wrapper {
+            width: 100%;
+            max-width: 400px;
+        }
+
+        /* Marka Başlığı */
+        .brand {
+            margin-bottom: 2.5rem;
+        }
+
+        .brand h1 {
+            font-size: 1.75rem;
+            font-weight: 300;
+            color: #37474f;
+            letter-spacing: 1px;
+        }
+
+        .brand h1 strong {
+            font-weight: 700;
+            color: #1a2e3b;
+        }
+
+        .brand p {
+            margin-top: 0.5rem;
+            color: #78909c;
+            font-size: 0.9rem;
+        }
+
+        /* Form Alanları */
+        .input-group {
+            position: relative;
+            margin-bottom: 1.25rem;
+        }
+
+        .input-group i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.2rem;
+            color: #90a4ae;
+            pointer-events: none;
+            transition: color 0.2s;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 0.85rem 1rem 0.85rem 2.75rem;
+            border: 1.5px solid #e0e6ed;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            color: #37474f;
+            background: #fafbfc;
+            outline: none;
+            transition: all 0.25s ease;
+        }
+
+        .input-group input::placeholder {
+            color: #b0bec5;
+        }
+
+        .input-group input:focus {
+            border-color: #2e9e6e;
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(46, 158, 110, 0.1);
+        }
+
+        .input-group input:focus + i,
+        .input-group input:focus ~ i {
+            color: #2e9e6e;
+        }
+
+        /* Şifre göster/gizle */
+        .toggle-password {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: #90a4ae;
+            pointer-events: all;
+            padding: 4px;
+            transition: color 0.2s;
+        }
+
+        .toggle-password:hover {
+            color: #546e7a;
+        }
+
+        /* Beni Hatırla + Şifremi Unuttum */
+        .form-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.75rem;
+            font-size: 0.85rem;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #546e7a;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .remember-me input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #2e9e6e;
+            cursor: pointer;
+        }
+
+        .forgot-link {
+            color: #2e9e6e;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .forgot-link:hover {
+            color: #237a55;
+        }
+
+        /* Giriş Butonu */
+        .login-btn {
+            width: 100%;
+            padding: 0.9rem;
+            background: linear-gradient(135deg, #2e9e6e 0%, #27ae7a 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.15) 100%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(46, 158, 110, 0.35);
+        }
+
+        .login-btn:hover::after {
+            opacity: 1;
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Loading Spinner */
+        .login-btn .spinner-icon {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2.5px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            margin: 0 auto;
+        }
+
+        .login-btn.loading .spinner-icon { display: inline-block; }
+        .login-btn.loading .btn-text { display: none; }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Hata Mesajı */
+        .error-banner {
+            display: none;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1.25rem;
+            color: #dc2626;
+            font-size: 0.875rem;
+            font-weight: 500;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .error-banner.show {
+            display: flex;
+        }
+
+        .error-banner i {
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        /* Demo bilgileri */
+        .demo-info {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #f8fafb;
+            border-radius: 10px;
+            border: 1px dashed #d5dde3;
+        }
+
+        .demo-info p {
+            font-size: 0.78rem;
+            color: #78909c;
+            margin-bottom: 0.4rem;
+            font-family: 'Inter', monospace;
+        }
+
+        .demo-info p:last-child {
+            margin-bottom: 0;
+        }
+
+        .demo-info .demo-title {
+            font-weight: 600;
+            color: #546e7a;
+            margin-bottom: 0.6rem;
+            font-size: 0.8rem;
+        }
+
+        .demo-info span.role-tag {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-left: 4px;
+        }
+
+        .tag-admin { background: #fee2e2; color: #991b1b; }
+        .tag-teacher { background: #e0e7ff; color: #3730a3; }
+        .tag-student { background: #fef9c3; color: #854d0e; }
+
+        /* Footer */
+        .login-footer {
+            position: absolute;
+            bottom: 1.5rem;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 0.78rem;
+            color: #b0bec5;
+        }
+
+        /* ===================== RESPONSIVE ===================== */
+        @media (max-width: 900px) {
+            .login-main {
+                padding: 2rem;
+            }
+
+            .login-right {
+                padding: 2.5rem 1.5rem;
+            }
+
+            .illustration-container img {
+                max-width: 300px;
+            }
+
+            .illustration-text {
+                display: none;
+            }
+
+            .login-footer {
+                position: relative;
+                margin-top: 2rem;
+                bottom: auto;
+                color: rgba(255,255,255,0.8);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .login-right {
+                padding: 2rem 1.25rem;
+            }
+
+            .brand h1 {
+                font-size: 1.4rem;
+            }
+        }
+        /* ===================== ÜST MENÜ (HEADER) ===================== */
+        .top-header {
+            width: 100%;
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            z-index: 10;
+            background: transparent;
+            flex-shrink: 0;
+        }
+
+        .top-header nav {
+            pointer-events: auto;
+            display: flex;
+            gap: 2rem;
+        }
+
+        .top-header a {
+            text-decoration: none;
+            color: #546e7a;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: color 0.2s, transform 0.2s;
+        }
+
+        .top-header a:hover {
+            color: #2e9e6e;
+            transform: translateY(-2px);
+        }
+
+        .lang-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: transparent;
+            border: 1px solid #90a4ae;
+            color: #546e7a;
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .lang-toggle:hover {
+            border-color: #2e9e6e;
+            color: #2e9e6e;
+        }
+
+        .top-header nav {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.5rem 1.5rem;
+            border-radius: 50px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .top-header a {
+            color: #ffffff;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .lang-toggle {
+            color: #ffffff;
+            border-color: rgba(255,255,255,0.4);
+        }
+
+        /* ===================== FOOTER ===================== */
+        .site-footer {
+            background: rgba(15, 25, 35, 0.85); /* Yarı saydam footer */
+            backdrop-filter: blur(15px);
+            color: #b0bec5;
+            padding: 0.75rem 1.5rem;       /* Kompakt — scroll'a yer vermesin */
+            display: flex;
+            margin-top: auto;
+            justify-content: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            flex-shrink: 0;
+        }
+
+        .footer-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            min-width: 150px;
+        }
+
+        .footer-section h3 {
+            color: #ffffff;
+            font-size: 1.05rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.5px;
+        }
+
+        .footer-section a {
+            color: #90a4ae;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .footer-section a:hover {
+            color: #2e9e6e;
+        }
+
+        .footer-bottom {
+            background: rgba(10, 15, 20, 0.9);
+            text-align: center;
+            padding: 1rem; /* Daha ince bir alt çizgi */
+            color: #546e7a;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        /* ─────────────────────────────────────────────────────────────────
+           DARK MODE override — login-spesifik elementler
+           ─────────────────────────────────────────────────────────────── */
+        [data-theme="dark"] body {
+            /* Arka plan görselinin üzerine koyu yarı saydam katman */
+            background:
+                linear-gradient(135deg, rgba(13,19,28,0.85), rgba(20,30,42,0.85)),
+                url('./omr-login-bg.png') center/cover no-repeat fixed;
+        }
+        [data-theme="dark"] .login-right {
+            background: rgba(20, 28, 38, 0.85);
+            border-color: rgba(255,255,255,0.08);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.45);
+        }
+        [data-theme="dark"] .brand h1 { color: #e5e7eb; }
+        [data-theme="dark"] .brand p  { color: #94a3b8; }
+        [data-theme="dark"] .input-group input {
+            background: rgba(255,255,255,0.05);
+            border-color: rgba(255,255,255,0.12);
+            color: #e5e7eb;
+        }
+        [data-theme="dark"] .input-group input::placeholder { color: #64748b; }
+        [data-theme="dark"] .input-group input:focus {
+            background: rgba(255,255,255,0.08);
+            border-color: var(--pico-primary);
+        }
+        [data-theme="dark"] .input-group i { color: #94a3b8; }
+        [data-theme="dark"] .form-options { color: #cbd5e1; }
+        [data-theme="dark"] .form-options label,
+        [data-theme="dark"] .form-options .remember-me { color: #cbd5e1 !important; }
+        [data-theme="dark"] .error-banner {
+            background: rgba(220, 38, 38, 0.15);
+            border-color: rgba(252, 165, 165, 0.4);
+            color: #fca5a5;
+        }
+        [data-theme="dark"] .demo-info {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: #cbd5e1;
+        }
+        [data-theme="dark"] .demo-info p { color: #cbd5e1; }
+        [data-theme="dark"] .demo-title { color: #e5e7eb; }
+        [data-theme="dark"] .top-header nav { background: rgba(0,0,0,0.25); }
+        [data-theme="dark"] .top-header a { color: #e5e7eb; }
+        [data-theme="dark"] .theme-btn-login,
+        [data-theme="dark"] .lang-toggle {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.15);
+            color: #e5e7eb;
+        }
+        [data-theme="dark"] .site-footer {
+            background: rgba(0,0,0,0.55);
+            color: #cbd5e1;
+        }
+        /* "Beni hatırla" + "Şifremi Unuttum" linki dark uyum */
+        [data-theme="dark"] a { color: #93c5fd; }
+    </style>
+</head>
+
+<body>
+
+    <!-- ==================== HEADER ==================== -->
+    <header class="top-header">
+        <nav style="justify-content: flex-end; gap: 0.5rem;">
+            <!-- NOT: lang-toggle class'ı KULLANMA — auth.js otomatik dil değiştirme handler'ı bağlar.
+                 Stil için ayrı class kullanıyoruz. -->
+            <button id="darkModeToggleLogin" class="theme-btn-login" style="padding: 0.35rem 0.6rem;" title="Tema değiştir" aria-label="Tema değiştir">
+                <i class="ph ph-moon"></i>
+            </button>
+            <button class="lang-toggle">
+                <i class="ph ph-globe"></i> <span class="lang-text">EN</span>
+            </button>
+        </nav>
+    </header>
+
+    <main class="login-main">
+        <!-- ==================== SOL PANEL ==================== -->
+        <div class="login-left">
+            <div class="illustration-container">
+                <img src="./omr-bg.png" alt="OMR Teknolojisi İllüstrasyonu">
+                <p class="illustration-text" data-i18n="hero_desc">Optik Form Okuma • Otomatik Puanlama • Veri Analizi</p>
+            </div>
+        </div>
+
+    <!-- ==================== SAĞ PANEL ==================== -->
+    <div class="login-right">
+        <div class="login-form-wrapper">
+
+            <!-- Marka -->
+            <div class="brand">
+                <h1>OMR <strong>TECHNOLOGY</strong></h1>
+                <p data-i18n="brand_desc">Optik Form Okuma Sistemi — Giriş Yapın</p>
+            </div>
+
+            <!-- Hata Mesajı -->
+            <div class="error-banner" id="errorBanner">
+                <i class="ph ph-warning-circle"></i>
+                <span id="errorText" data-i18n="error_text">Giriş başarısız. Lütfen bilgilerinizi kontrol edin.</span>
+            </div>
+
+            <!-- Form -->
+            <form id="loginForm" autocomplete="on">
+                <div class="input-group">
+                    <input type="email" id="email" name="email" data-i18n-placeholder="email_placeholder" placeholder="E-posta adresiniz" required autocomplete="email">
+                    <i class="ph ph-user"></i>
+                </div>
+
+                <div class="input-group">
+                    <input type="password" id="password" name="password" data-i18n-placeholder="password_placeholder" placeholder="Şifreniz" required autocomplete="current-password">
+                    <i class="ph ph-lock"></i>
+
+                </div>
+
+                <div class="form-options" style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 1.5rem;">
+                    <label class="remember-me" style="margin: 0; font-size: 0.9rem; color: #546e7a;">
+                        <input type="checkbox" id="rememberMe"> <span data-i18n="remember_me">Beni hatırla</span>
+                    </label>
+                    <a href="./forgot-password.html" style="font-size: 0.9rem; color: var(--pico-primary); text-decoration: none; font-weight: 500;" data-i18n="forgot_pwd">Şifremi Unuttum</a>
+                </div>
+
+                <button type="submit" class="login-btn" id="loginBtn">
+                    <span class="btn-text" data-i18n="login_btn">Giriş Yap</span>
+                    <span class="spinner-icon"></span>
+                </button>
+            </form>
+
+            <!-- Demo Bilgileri — yalnızca MOCK modda görünür -->
+            <div class="demo-info" id="demoInfo" style="display: none;">
+                <p class="demo-title" data-i18n="demo_title">Demo Hesapları</p>
+                <p>admin@omr.local / admin123 <span class="role-tag tag-admin" data-i18n="role_admin">Admin</span></p>
+                <p>ogretmen@omr.local / ogretmen123 <span class="role-tag tag-teacher" data-i18n="role_teacher">Öğretmen</span></p>
+                <p>vedat@omr.local / ogrenci123 <span class="role-tag tag-student" data-i18n="role_student">Öğrenci</span></p>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- ==================== FOOTER ==================== -->
+    <footer class="site-footer site-footer-min" style="justify-content:center; padding: 1rem 2rem; gap: 1rem;">
+        <div style="color: rgba(255,255,255,0.85); font-size: 0.85rem; text-align: center;">
+            &copy; 2026 İstinye Üniversitesi — BST210 Bitirme Projesi
+            <span style="margin: 0 0.5rem; opacity: 0.4;">·</span>
+            <a href="mailto:omr@istinye.edu.tr" style="color: inherit; text-decoration: underline;">
+                <i class="ph ph-envelope" style="vertical-align: -2px;"></i>
+                <span data-i18n="footer_support">Destek</span>
+            </a>
+        </div>
+    </footer>
+
+    <!-- ==================== SCRIPT ==================== -->
+    <script type="module">
+        import { doLogin, getToken, getRole, USE_MOCK } from './auth.js?v=2';
+
+        // Demo hesap kutusu sadece MOCK modda görünsün; production'da gizli kalsın.
+        if (USE_MOCK) {
+            const demoInfo = document.getElementById('demoInfo');
+            if (demoInfo) demoInfo.style.display = '';
+        }
+
+        // Zaten giriş yapmışsa role göre yönlendir (Kullanıcı giriş sayfasını her zaman görmek istediği için devredışı bırakıldı)
+        /*
+        if (getToken()) {
+            const role = getRole();
+            if (role === 'admin') window.location.href = './admin.html';
+            else if (role === 'teacher') window.location.href = './teacher.html';
+            else if (role === 'student') window.location.href = './student.html';
+        }
+        */
+
+        // Dark mode toggle (header'daki id="darkModeToggleLogin")
+        (function initLoginDarkMode() {
+            const btn = document.getElementById('darkModeToggleLogin');
+            if (!btn) return;
+            const apply = (theme) => {
+                document.documentElement.setAttribute('data-theme', theme);
+                btn.innerHTML = theme === 'dark'
+                    ? '<i class="ph ph-sun"></i>'
+                    : '<i class="ph ph-moon"></i>';
+            };
+            const saved = (() => { try { return localStorage.getItem('omr_theme'); } catch { return null; } })() || 'light';
+            apply(saved);
+            btn.addEventListener('click', () => {
+                const current = document.documentElement.getAttribute('data-theme') || 'light';
+                const next = current === 'dark' ? 'light' : 'dark';
+                try { localStorage.setItem('omr_theme', next); } catch {}
+                apply(next);
+            });
+        })();
+
+        // DOM Elemanları
+        const loginForm = document.getElementById('loginForm');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const loginBtn = document.getElementById('loginBtn');
+        const errorBanner = document.getElementById('errorBanner');
+        const errorText = document.getElementById('errorText');
+
+        // Form Submit
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Hata mesajını gizle
+            errorBanner.classList.remove('show');
+
+            // Loading durumu
+            loginBtn.classList.add('loading');
+            loginBtn.disabled = true;
+
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+            const remember = document.getElementById('rememberMe').checked;
+
+            try {
+                await doLogin(email, password, remember);
+                // doLogin başarılıysa zaten yönlendirme yapıyor (auth.js içinde)
+            } catch (error) {
+                console.error('Login hatası:', error);
+                errorText.textContent = error.message || 'Giriş başarısız. Lütfen bilgilerinizi kontrol edin.';
+                errorBanner.classList.add('show');
+            } finally {
+                loginBtn.classList.remove('loading');
+                loginBtn.disabled = false;
+            }
+        });
+
+        // Beni hatırla — daha önce kayıtlı email varsa doldur
+        const savedEmail = localStorage.getItem('omr_remember_email');
+        if (savedEmail) {
+            emailInput.value = savedEmail;
+            document.getElementById('rememberMe').checked = true;
+        }
+
+        window.addEventListener('languageChanged', () => {
+            const errBanner = document.getElementById('errorBanner');
+            if (errBanner.style.display === 'flex') {
+                document.getElementById('errorText').textContent = t('error_text');
+            }
+        });
+
+        loginForm.addEventListener('submit', () => {
+            const remember = document.getElementById('rememberMe').checked;
+            if (remember) {
+                localStorage.setItem('omr_remember_email', emailInput.value.trim());
+            } else {
+                localStorage.removeItem('omr_remember_email');
+            }
+        }, true);
+    </script>
+</body>
+
+</html>

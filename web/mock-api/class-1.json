@@ -1,0 +1,9 @@
+{ 
+  "id": 1, 
+  "name": "Bilgisayar Müh. 2. Sınıf", 
+  "students": [ 
+    {"id": 3, "full_name": "VEDAT EMRE KESKİN", "student_number": "2420171020"}, 
+    {"id": 4, "full_name": "EMRECAN ÜNAL", "student_number": "2420171021"}, 
+    {"id": 5, "full_name": "FARUK TOY", "student_number": "2420171022"} 
+  ] 
+}
