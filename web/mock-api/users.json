@@ -1,0 +1,6 @@
+[ 
+  {"id": 1, "full_name": "Sistem Admin", "email": "admin@omr.local", "role": "admin", "student_number": null}, 
+  {"id": 2, "full_name": "Örnek Öğretmen", "email": "ogretmen@omr.local", "role": "teacher", "student_number": null}, 
+  {"id": 3, "full_name": "VEDAT EMRE KESKİN", "email": "vedat@omr.local", "role": "student", "student_number": "2420171020"}, 
+  {"id": 4, "full_name": "EMRECAN ÜNAL", "email": "emrecan@omr.local", "role": "student", "student_number": "2420171021"} 
+]

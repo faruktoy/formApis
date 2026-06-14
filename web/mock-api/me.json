@@ -1,0 +1,7 @@
+{ 
+  "id": 2, 
+  "full_name": "Örnek Öğretmen", 
+  "email": "ogretmen@omr.local", 
+  "role": "teacher", 
+  "student_number": null 
+}

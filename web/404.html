@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="OMR Optik Form Okuma Sistemi — 404 Sayfa Bulunamadı">
+    <title>OMR Sistemi — 404</title>
+    <!-- Özel Stiller -->
+        <script src="./runtime-config.js"></script>
+    <link rel="stylesheet" href="./style.css">
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="./manifest.json">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;700;900&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: url('./omr-login-bg.png') center/cover no-repeat fixed;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .error-main {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            width: 100%;
+            height: 100vh;
+            position: relative;
+        }
+
+        .error-container {
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+            padding: 4rem 3rem;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 32px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            position: relative;
+            z-index: 2;
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .error-code {
+            font-family: 'Outfit', sans-serif;
+            font-size: 8rem;
+            font-weight: 900;
+            line-height: 1;
+            background: linear-gradient(135deg, #2e9e6e, #4a90a4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+            position: relative;
+            display: inline-block;
+        }
+
+        .error-code::after {
+            content: '';
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            height: 20px;
+            background: rgba(46, 158, 110, 0.2);
+            filter: blur(15px);
+            z-index: -1;
+            border-radius: 50%;
+        }
+
+        .error-title {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: #1a2e3b;
+            margin-bottom: 1rem;
+            letter-spacing: -0.5px;
+        }
+
+        .error-desc {
+            color: #546e7a;
+            font-size: 1.1rem;
+            margin-bottom: 2.5rem;
+            line-height: 1.6;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: #1a2e3b;
+            color: white;
+            padding: 0.875rem 2rem;
+            border-radius: 12px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(26, 46, 59, 0.2);
+        }
+
+        .back-btn:hover {
+            background: #2e9e6e;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(46, 158, 110, 0.3);
+        }
+
+        .back-btn i {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .back-btn:hover i {
+            transform: translateX(-4px);
+        }
+
+        /* Floating elements in background */
+        .shape {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(40px);
+            z-index: 1;
+            animation: float 10s ease-in-out infinite alternate;
+        }
+        
+        .shape-1 {
+            width: 300px;
+            height: 300px;
+            background: rgba(46, 158, 110, 0.15);
+            top: -50px;
+            left: -50px;
+        }
+        
+        .shape-2 {
+            width: 400px;
+            height: 400px;
+            background: rgba(74, 144, 164, 0.12);
+            bottom: -100px;
+            right: -50px;
+            animation-delay: -5s;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(30px, 50px) rotate(10deg); }
+        }
+
+        /* Dark mode uyumluluğu */
+        [data-theme="dark"] .error-container {
+            background: rgba(20, 30, 40, 0.7);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+        [data-theme="dark"] .error-title { color: #f8fafc; }
+        [data-theme="dark"] .error-desc { color: #94a3b8; }
+        [data-theme="dark"] .back-btn { background: #38bdf8; color: #0f172a; }
+        [data-theme="dark"] .back-btn:hover { background: #0ea5e9; }
+    </style>
+</head>
+
+<body>
+    <main class="error-main">
+        <!-- Arka plan bulanık şekiller -->
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+
+        <div class="error-container">
+            <div class="error-code">404</div>
+            <h1 class="error-title">Sayfa Bulunamadı</h1>
+            <p class="error-desc">Görünüşe göre kayboldunuz. Aradığınız sayfa silinmiş, adı değiştirilmiş veya geçici olarak ulaşılamıyor olabilir.</p>
+            
+            <a href="#" id="backLink" class="back-btn">
+                <i class="ph ph-arrow-left"></i> Ana Sayfaya Dön
+            </a>
+        </div>
+    </main>
+
+    <script src="./auth.js" type="module"></script>
+    <script type="module">
+        import { getRole } from './auth.js?v=2';
+
+        // Tema ayarını localStorage'dan al
+        const savedTheme = localStorage.getItem('omr_theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const backLink = document.getElementById('backLink');
+            const role = getRole();
+            
+            if (role === 'admin') {
+                backLink.href = './admin.html';
+                backLink.innerHTML = '<i class="ph ph-arrow-left"></i> Admin Paneline Dön';
+            } else if (role === 'teacher') {
+                backLink.href = './teacher.html';
+                backLink.innerHTML = '<i class="ph ph-arrow-left"></i> Öğretmen Paneline Dön';
+            } else if (role === 'student') {
+                backLink.href = './student.html';
+                backLink.innerHTML = '<i class="ph ph-arrow-left"></i> Öğrenci Paneline Dön';
+            } else {
+                backLink.href = './login.html';
+                backLink.innerHTML = '<i class="ph ph-arrow-left"></i> Giriş Ekranına Dön';
+            }
+        });
+    </script>
+</body>
+
+</html>

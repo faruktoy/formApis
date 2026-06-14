@@ -1,0 +1,7 @@
+[ 
+  {"id": 1, "name": "Bilgisayar Müh. 2. Sınıf", "student_count": 30, "created_at": "2026-05-01T10:00:00"}, 
+  {"id": 2, "name": "Yazılım Müh. 3. Sınıf", "student_count": 25, "created_at": "2026-05-02T10:00:00"},
+  {"id": 3, "name": "Yapay Zeka Müh. 1. Sınıf", "student_count": 40, "created_at": "2026-05-03T10:00:00"},
+  {"id": 4, "name": "Yönetim Bilişim Sis. 4. Sınıf", "student_count": 20, "created_at": "2026-05-04T10:00:00"},
+  {"id": 5, "name": "Endüstri Müh. 2. Sınıf", "student_count": 45, "created_at": "2026-05-05T10:00:00"} 
+]

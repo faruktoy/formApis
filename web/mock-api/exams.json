@@ -1,0 +1,37 @@
+[ 
+  { 
+    "id": 1, "name": "BST210 Vize Sınavı", 
+    "class_id": 1, "class_name": "Bilgisayar Müh. 2. Sınıf", 
+    "template_id": 1, "template_name": "isu_dts836_mvp", 
+    "question_count": 100, "is_active": true, 
+    "deadline": null, "created_at": "2026-05-10T09:00:00" 
+  }, 
+  { 
+    "id": 2, "name": "BST210 Final Sınavı", 
+    "class_id": 1, "class_name": "Bilgisayar Müh. 2. Sınıf", 
+    "template_id": 1, "template_name": "isu_dts836_mvp", 
+    "question_count": 200, "is_active": false, 
+    "deadline": "2026-06-15T17:00:00", "created_at": "2026-05-10T09:00:00" 
+  }, 
+  { 
+    "id": 3, "name": "YZM101 Vize", 
+    "class_id": 3, "class_name": "Yapay Zeka Müh. 1. Sınıf", 
+    "template_id": 1, "template_name": "isu_dts836_mvp", 
+    "question_count": 50, "is_active": true, 
+    "deadline": null, "created_at": "2026-05-12T09:00:00" 
+  },
+  { 
+    "id": 4, "name": "YBS401 Proje Yönetimi", 
+    "class_id": 4, "class_name": "Yönetim Bilişim Sis. 4. Sınıf", 
+    "template_id": 1, "template_name": "isu_dts836_mvp", 
+    "question_count": 40, "is_active": true, 
+    "deadline": null, "created_at": "2026-05-15T09:00:00" 
+  },
+  { 
+    "id": 5, "name": "Yazılım Müh. Algoritmalar", 
+    "class_id": 2, "class_name": "Yazılım Müh. 3. Sınıf", 
+    "template_id": 1, "template_name": "isu_dts836_mvp", 
+    "question_count": 100, "is_active": true, 
+    "deadline": null, "created_at": "2026-05-16T09:00:00" 
+  }
+]

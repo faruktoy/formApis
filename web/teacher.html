@@ -1,0 +1,3302 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="OMR Optik Form Okuma Sistemi — Öğretmen Paneli. Sınıf yönetimi, sınav oluşturma, optik form tarama ve sonuç analizi.">
+    <title>OMR - Öğretmen Paneli</title>
+    <!-- Pico.css -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <script src="./runtime-config.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Özel Stiller -->
+    <link rel="stylesheet" href="./style.css">
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="./manifest.json">
+    <style>
+        /* Sadece bu sayfaya özgü ufak eklentiler varsa buraya gelecek, genel stiller style.css'te */
+        dialog article { max-width: 600px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar container-fluid">
+        <div class="container nav-container">
+            <strong data-i18n="teacher_panel">OMR — Öğretmen Paneli</strong>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <span id="userNameDisplay" style="font-weight: bold; display: none;"></span>
+                <button id="profileBtn" class="secondary outline" style="padding: 0.25rem; width: auto; margin: 0; border: none;" title="Profilim" onclick="openProfileModal()"><i class="ph ph-user"></i></button>
+                <button id="darkModeToggle" class="secondary outline" style="padding: 0.25rem; width: auto; margin: 0; border: none;" title="Tema Değiştir"></button>
+                <button class="lang-toggle secondary outline" style="padding: 0.25rem 0.5rem; width: auto; margin: 0; border: none;">
+                    <i class="ph ph-globe"></i> <span class="lang-text">EN</span>
+                </button>
+                <button id="logoutBtn" class="secondary outline" style="padding: 0.25rem 1rem; width: auto; margin: 0;" data-i18n="nav_logout">Çıkış</button>
+                <button id="mobileMenuBtn" class="hamburger-btn"><i class="ph ph-list"></i></button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobil sidebar overlay -->
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeMobileSidebar()"></div>
+
+    <main class="container layout">
+        <aside class="sidebar">
+            <nav class="menu">
+                <a href="#" data-target="dashboard" class="active"><i class="ph ph-squares-four"></i> <span data-i18n="nav_dashboard">Dashboard</span></a>
+                <a href="#" data-target="classes"><i class="ph ph-users-three"></i> <span data-i18n="nav_classes">Sınıflar</span></a>
+                <a href="#" data-target="exams"><i class="ph ph-file-text"></i> <span data-i18n="nav_exams">Sınavlar</span></a>
+                <a href="#" data-target="scan"><i class="ph ph-scan"></i> <span data-i18n="nav_scan">Tara</span></a>
+                <a href="#" data-target="results"><i class="ph ph-chart-bar"></i> <span data-i18n="nav_results">Sonuçlar</span></a>
+                
+
+            </nav>
+        </aside>
+
+        <section>
+            <!-- Dashboard -->
+            <div id="dashboard" class="section-content active">
+                <h2 data-i18n="nav_dashboard">Dashboard</h2>
+                <div class="stat-grid">
+                    <div class="stat-card">
+                        <div class="stat-card-icon"><i class="ph ph-users"></i></div>
+                        <div>
+                            <p style="margin: 0; color: var(--pico-muted-color); font-size: 0.875rem; font-weight: 500;" data-i18n="stat_classes">Toplam Sınıf</p>
+                            <h3 id="statClasses" style="margin: 0; font-size: 1.5rem; color: var(--pico-h1-color);">-</h3>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-icon"><i class="ph ph-file-text"></i></div>
+                        <div>
+                            <p style="margin: 0; color: var(--pico-muted-color); font-size: 0.875rem; font-weight: 500;" data-i18n="stat_exams">Toplam Sınav</p>
+                            <h3 id="statExams" style="margin: 0; font-size: 1.5rem; color: var(--pico-h1-color);">-</h3>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-icon"><i class="ph ph-scan"></i></div>
+                        <div>
+                            <p style="margin: 0; color: var(--pico-muted-color); font-size: 0.875rem; font-weight: 500;" data-i18n="stat_scans">Taranan Form</p>
+                            <h3 id="statScans" style="margin: 0; font-size: 1.5rem; color: var(--pico-h1-color);">-</h3>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid" style="margin-top: 2rem; gap: 2rem;">
+                    <!-- Sınıflarım -->
+                    <div>
+                        <h3 style="font-size: 1.1rem; margin-bottom: 1rem;"><i class="ph ph-users-three"></i> <span data-i18n="nav_classes">Sınıflarım</span></h3>
+                        <div id="dashboardClassesList"></div>
+                    </div>
+                    <!-- Son Okunan Notlar -->
+                    <div>
+                        <h3 style="font-size: 1.1rem; margin-bottom: 1rem;"><i class="ph ph-exam"></i> Son Okunan Notlar</h3>
+                        <div id="dashboardRecentResultsList"></div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 2rem; padding: 1.5rem; background: var(--pico-card-background-color); border-radius: var(--pico-border-radius); box-shadow: var(--pico-card-box-shadow); border: 1px solid var(--pico-muted-border-color);">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 1rem;" data-i18n="chart_title">Sınıf Başarı Ortalamaları (%)</h3>
+                    <canvas id="statsChart" style="max-height: 300px; width: 100%;"></canvas>
+                </div>
+            </div>
+
+            <!-- Classes -->
+            <div id="classes" class="section-content">
+                <h2 data-i18n="nav_classes">Sınıflar</h2>
+                <article>
+                    <header><strong data-i18n="create_class">Yeni Sınıf Oluştur</strong></header>
+                    <form id="newClassForm" class="grid" style="align-items: flex-end;">
+                        <div>
+                            <label for="newClassName" data-i18n="class_name">Sınıf Adı</label>
+                            <input type="text" id="newClassName" data-i18n-placeholder="class_placeholder" placeholder="Örn: Bilgisayar Müh. 1. Sınıf" required>
+                        </div>
+                        <button type="submit" style="width: auto; margin-bottom: var(--pico-spacing);" data-i18n="btn_create">Oluştur</button>
+                    </form>
+                </article>
+
+                <!-- Filtreler toggle bar -->
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:0.5rem;">
+                    <h5 style="margin:0; color:var(--pico-muted-color);" data-i18n="class_list">Sınıf Listesi</h5>
+                    <button class="filter-toggle outline secondary" data-target-panel="teacherClassesFilters" style="width:auto; margin:0; padding:0.35rem 0.8rem;">
+                        <i class="ph ph-funnel"></i> <span data-i18n="filters_toggle">Filtreler</span>
+                    </button>
+                </div>
+                <div id="teacherClassesFilters" class="filter-panel" style="display:none; padding:0.75rem; border:1px solid var(--pico-muted-border-color); border-radius:8px; margin-bottom:0.75rem;">
+                    <div class="search-container" style="margin:0; max-width:none;">
+                        <i class="ph ph-magnifying-glass"></i>
+                        <input type="search" id="teacherClassSearch" placeholder="Sınıf adı...">
+                    </div>
+                </div>
+
+                <div class="overflow-auto">
+                    <table role="grid" id="teacherClassesTable">
+                        <thead><tr>
+                            <th class="sortable-th" data-sort-key="name" onclick="sortTeacherTable('classes','name')"><span data-i18n="class_name">Sınıf Adı</span><span class="sort-ind"></span></th>
+                            <th class="sortable-th" data-sort-key="count" onclick="sortTeacherTable('classes','count')"><span data-i18n="th_student_count">Öğrenci Sayısı</span><span class="sort-ind"></span></th>
+                            <th data-i18n="th_action">İşlem</th>
+                        </tr></thead>
+                        <tbody id="classesTableBody">
+                            <tr><td colspan="3" data-i18n="loading">Yükleniyor...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Exams -->
+            <div id="exams" class="section-content">
+                <h2 data-i18n="nav_exams">Sınavlar</h2>
+                <article>
+                    <header><strong data-i18n="create_exam">Yeni Sınav Oluştur</strong></header>
+                    <form id="newExamForm">
+                        <div class="grid">
+                            <div>
+                                <label for="newExamName" data-i18n="exam_name">Sınav Adı</label>
+                                <input type="text" id="newExamName" data-i18n-placeholder="exam_name" placeholder="Sınav Adı" required>
+                            </div>
+                            <div>
+                                <label for="newExamClass" data-i18n="nav_classes">Sınıf</label>
+                                <select id="newExamClass" required><option value="" data-i18n="select_class">Sınıf Seç...</option></select>
+                            </div>
+                        </div>
+                        <div class="grid">
+                            <div>
+                                <label for="newExamTemplate" data-i18n="th_tpl_name">Şablon</label>
+                                <select id="newExamTemplate" required><option value="" data-i18n="select_template">Şablon Seç...</option></select>
+                            </div>
+                            <div>
+                                <label for="newExamQCount" data-i18n="th_qcount">Soru Sayısı</label>
+                                <input type="number" id="newExamQCount" data-i18n-placeholder="th_qcount" placeholder="Soru Sayısı" required>
+                            </div>
+                        </div>
+                        <label for="newExamKeys" data-i18n="answer_key">Cevap Anahtarı (JSON Formatı)</label>
+                        <textarea id="newExamKeys" placeholder='{"1":"A", "2":"B"}' rows="3"></textarea>
+                        
+                        <div id="visualAnswerKeyContainer" style="margin-top: 1rem; margin-bottom: 1.5rem; padding: 1rem; border: 1px solid var(--pico-muted-border-color); border-radius: 8px; background: var(--pico-card-background-color);">
+                            <h6 style="margin-bottom: 0.25rem; font-size: 0.9rem;" data-i18n="visual_key_title">Cevap Anahtarı Sihirbazı</h6>
+                            <p style="font-size: 0.75rem; color: var(--pico-muted-color); margin-bottom: 0.75rem;" data-i18n="visual_key_subtitle">Soru sayısına göre şıklar otomatik listelenir. Tıklayarak işaretle, veya toplu girişi kullan.</p>
+
+                            <!-- Toplu giriş bar — pattern + butonlar -->
+                            <div id="vkBulkBar" style="display:none; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.75rem; align-items:center;">
+                                <input type="text" id="vkBulkInput" data-i18n-placeholder="vk_bulk_placeholder" placeholder="Örn: ABCDE veya ABCDEABCDE…" style="flex:1; min-width:180px; margin:0; padding:0.35rem 0.5rem; font-size:0.85rem;">
+                                <button type="button" id="vkBulkApply" style="margin:0; padding:0.35rem 0.8rem; width:auto;" data-i18n="vk_apply">Uygula</button>
+                                <button type="button" id="vkRandom"   class="outline secondary" style="margin:0; padding:0.35rem 0.8rem; width:auto;" data-i18n="vk_random">Rastgele</button>
+                                <button type="button" id="vkAllA"     class="outline secondary" style="margin:0; padding:0.35rem 0.8rem; width:auto;" data-i18n="vk_all_a">Tümü A</button>
+                                <button type="button" id="vkClear"    class="outline secondary contrast" style="margin:0; padding:0.35rem 0.8rem; width:auto;" data-i18n="vk_clear">Temizle</button>
+                                <!-- Şablondan/Sınavdan yükle -->
+                                <div style="display:flex; gap:0.25rem; align-items:center;">
+                                    <select id="vkLoadFromExam" style="margin:0; padding:0.35rem 0.5rem; width:auto; font-size:0.85rem; min-width:140px;">
+                                        <option value="" data-i18n="vk_load_exam_hint">Mevcut sınavdan...</option>
+                                    </select>
+                                    <button type="button" id="vkLoadFromExamBtn" class="outline" style="margin:0; padding:0.35rem 0.8rem; width:auto;" data-i18n="vk_load_from_exam">Yükle</button>
+                                </div>
+                            </div>
+
+                            <!-- Grid: her satır = bir soru -->
+                            <div id="visualAnswerKeyGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px 10px; max-height: 280px; overflow-y: auto; padding-right: 5px;">
+                                <p style="font-size:0.8rem; color:var(--pico-muted-color); margin: 0;" data-i18n="visual_key_info">Soru sayısı girildiğinde sihirbaz aktif olacaktır.</p>
+                            </div>
+                        </div>
+
+                        <!-- Sihirbaz stiling — kompakt buton grupları, mobil uyumlu -->
+                        <style>
+                            .vk-row { display:flex; align-items:center; gap:4px; font-size:0.8rem; padding:3px 4px; border:1px solid var(--pico-muted-border-color); border-radius:5px; background:var(--pico-background-color); }
+                            .vk-row > .vk-label { font-weight:600; min-width:26px; color:var(--pico-color); }
+                            .vk-row > .vk-btn { padding:1px 0; margin:0; min-width:22px; height:22px; font-size:0.75rem; line-height:1; width:auto; border-radius:4px; }
+                            .vk-row > .vk-btn.vk-selected { background: var(--pico-primary); color:#fff; border-color: var(--pico-primary); }
+                            .vk-row > .vk-btn.vk-blank { font-size:0.85rem; padding:1px 4px; opacity:0.7; }
+                            .vk-row > .vk-btn.vk-blank.vk-selected { background: var(--pico-muted-color); color:#fff; border-color: var(--pico-muted-color); opacity:1; }
+                            @media (max-width: 600px) {
+                                #visualAnswerKeyGrid { grid-template-columns: 1fr 1fr !important; }
+                                .vk-row > .vk-btn { min-width:26px; height:26px; }
+                            }
+                        </style>
+                        
+                        <button type="submit" data-i18n="btn_create_exam">Sınav Oluştur</button>
+                    </form>
+                </article>
+                <!-- Filtreler toggle bar -->
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:0.5rem;">
+                    <h5 style="margin:0; color:var(--pico-muted-color);" data-i18n="exam_list">Sınav Listesi</h5>
+                    <button class="filter-toggle outline secondary" data-target-panel="teacherExamsFilters" style="width:auto; margin:0; padding:0.35rem 0.8rem;">
+                        <i class="ph ph-funnel"></i> <span data-i18n="filters_toggle">Filtreler</span>
+                    </button>
+                </div>
+                <div id="teacherExamsFilters" class="filter-panel" style="display:none; padding:0.75rem; border:1px solid var(--pico-muted-border-color); border-radius:8px; margin-bottom:0.75rem;">
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:0.5rem;">
+                        <input type="search" id="teacherExamSearch" placeholder="Sınav adı / sınıf adı...">
+                        <select id="teacherExamStatusFilter">
+                            <option value="" data-i18n="all_status">Tüm Durumlar</option>
+                            <option value="active" data-i18n="status_active">Aktif</option>
+                            <option value="passive" data-i18n="status_passive">Pasif</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="overflow-auto">
+                    <table role="grid" id="teacherExamsTable">
+                        <thead><tr>
+                            <th class="sortable-th" data-sort-key="name" onclick="sortTeacherTable('exams','name')"><span data-i18n="exam_name">Sınav Adı</span><span class="sort-ind"></span></th>
+                            <th class="sortable-th" data-sort-key="class" onclick="sortTeacherTable('exams','class')"><span data-i18n="nav_classes">Sınıf</span><span class="sort-ind"></span></th>
+                            <th class="sortable-th" data-sort-key="qcount" onclick="sortTeacherTable('exams','qcount')"><span data-i18n="th_qcount">Soru</span><span class="sort-ind"></span></th>
+                            <th class="sortable-th" data-sort-key="status" onclick="sortTeacherTable('exams','status')"><span data-i18n="th_status">Durum</span><span class="sort-ind"></span></th>
+                            <th data-i18n="th_action">İşlem</th>
+                        </tr></thead>
+                        <tbody id="examsTableBody">
+                            <tr><td colspan="5" data-i18n="loading">Yükleniyor...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Scan -->
+            <div id="scan" class="section-content">
+                <h2 data-i18n="scan_title">Optik Form Tara</h2>
+                <article>
+                    <form id="scanForm">
+                        <!-- Tarama modu: Sınav seç (skorlama için) veya Hızlı Tarama (sınavsız) -->
+                        <div role="group" style="display:flex; gap:0; margin-bottom:1rem; border:1px solid var(--pico-muted-border-color); border-radius:8px; overflow:hidden;">
+                            <button type="button" id="scanModeExamBtn" class="contrast" style="flex:1; margin:0; border-radius:0; padding:0.5rem;" data-i18n="scan_mode_exam">Sınav ile Tara</button>
+                            <button type="button" id="scanModeQuickBtn" class="secondary outline" style="flex:1; margin:0; border-radius:0; padding:0.5rem;" data-i18n="scan_mode_quick">Hızlı Tarama (sınavsız)</button>
+                        </div>
+
+                        <!-- Sınav modu — exam select -->
+                        <div id="scanExamModeFields">
+                            <label for="scanExamSelect" data-i18n="select_exam">Sınav Seç</label>
+                            <select id="scanExamSelect">
+                                <option value="" data-i18n="select_exam">Sınav Seçiniz...</option>
+                            </select>
+                        </div>
+
+                        <!-- Hızlı tarama modu — template + opsiyonel answer key + question_count -->
+                        <div id="scanQuickModeFields" style="display:none;">
+                            <div class="grid">
+                                <div>
+                                    <label for="quickTemplateSelect" data-i18n="quick_template">Şablon</label>
+                                    <select id="quickTemplateSelect">
+                                        <option value="">— <span data-i18n="select_template">Şablon Seç...</span> —</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="quickQuestionCount" data-i18n="quick_question_count">Soru Sayısı</label>
+                                    <input type="number" id="quickQuestionCount" min="1" max="200" placeholder="200" data-i18n-placeholder="quick_question_count_ph">
+                                </div>
+                            </div>
+                            <small style="display:block; color:var(--pico-muted-color); margin: -0.25rem 0 0.75rem;" data-i18n="quick_question_count_hint">
+                                ⚡ Soru sayısı verirseniz tarama o kolonlarla sınırlanır → daha hızlı (örn. 30 soru için ~7× hız kazancı).
+                            </small>
+                            <label for="quickAnswerKey" style="margin-top:0.5rem;" data-i18n="quick_answer_key">Cevap Anahtarı (opsiyonel)</label>
+                            <textarea id="quickAnswerKey" rows="2" placeholder='{"1":"A","2":"B","3":"-"}'
+                                      style="font-family: monospace; font-size:0.85rem;"></textarea>
+                            <small style="display:block; color:var(--pico-muted-color); margin-bottom:0.75rem;" data-i18n="quick_answer_key_help">
+                                JSON formatı veya boş bırakın; auto-key seçiliyse CEVAP sayfalarından otomatik çıkarılır.
+                            </small>
+                        </div>
+
+                        <label for="scanFileInput" data-i18n="scan_multi_label">Optik Form Görselleri veya PDF (Çoklu Seçim Yapabilirsiniz)</label>
+                        <input type="file" id="scanFileInput" accept="image/*,application/pdf" multiple required>
+
+                        <div id="filePreviewContainer" class="preview-container">
+                            <p style="margin-bottom:0.5rem; font-size:0.875rem; color:var(--pico-muted-color);"><span data-i18n="selected_files">Seçilen Dosyalar</span> <span id="fileCountBadge" class="badge"></span></p>
+                            <div id="multiPreviewGrid" style="display:flex; flex-wrap:wrap; gap:10px; max-height:200px; overflow-y:auto; border:1px solid var(--pico-muted-border-color); padding:0.5rem; border-radius:8px;"></div>
+                        </div>
+
+                        <!-- ★ Auto-key Toggle -->
+                        <label style="display:flex; align-items:center; gap:0.5rem; margin-top:0.75rem; cursor:pointer;">
+                            <input type="checkbox" id="autoKeyToggle" style="margin:0;">
+                            <span><strong data-i18n="auto_key_title">Cevap anahtarını otomatik tespit et</strong>
+                                <small style="display:block; color:var(--pico-muted-color); font-size:0.8rem;" data-i18n="auto_key_subtitle">PDF'in başında/sonunda CEVAP sayfası varsa her test grubu (A/B/...) için anahtar çıkarılır</small>
+                            </span>
+                        </label>
+
+                        <!-- ★ İşaretli görsel üret toggle — default kapalı -->
+                        <label style="display:flex; align-items:center; gap:0.5rem; margin-top:0.5rem; cursor:pointer;">
+                            <input type="checkbox" id="withImageToggle" style="margin:0;">
+                            <span><strong data-i18n="scan_with_image">İşaretli görsel üret (skor + işaretli .jpg)</strong>
+                                <small style="display:block; color:var(--pico-muted-color); font-size:0.8rem;" data-i18n="scan_with_image_help">Kapalıyken sadece skor/JSON üretilir; daha hızlı ve disk tasarrufu sağlar.</small>
+                            </span>
+                        </label>
+
+                        <!-- Progress Bar (Batch Upload) -->
+                        <progress id="scanProgress" value="0" max="100" style="display: none; margin-top: 1rem;"></progress>
+                        <p id="scanProgressText" style="text-align:center; font-size:0.85rem; display:none; margin:0;"></p>
+                        <p id="scanPhaseText" style="text-align:center; font-size:0.8rem; color:var(--pico-muted-color); display:none; margin:0;"></p>
+                        <div id="scanCancelWrap" style="display:none; text-align:center; margin-top:0.5rem;">
+                            <button type="button" id="scanCancelBtn" class="btn-danger" style="width:auto; margin:0; padding:0.3rem 0.8rem; font-size:0.85rem;">
+                                <i class="ph ph-stop-circle"></i> <span data-i18n="scan_cancel">Taramayı İptal Et</span>
+                            </button>
+                        </div>
+
+                        <button type="submit" id="scanBtn" style="margin-top: 1rem;" data-i18n="btn_scan_multi">Formları Tara</button>
+                    </form>
+                    <div id="scanSpinner" class="spinner"></div>
+                </article>
+                
+                <div id="scanResultCard" style="display: none;">
+                    <article>
+                        <header style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+                            <strong data-i18n="scan_success">Tarama Sonucu Başarılı!</strong>
+                            <button id="goToResultsBtn" class="contrast" style="margin:0; width:auto; padding:0.4rem 0.9rem;" data-i18n="scan_go_results">
+                                Sonuçları Görüntüle →
+                            </button>
+                        </header>
+
+                        <!-- Batch özeti — kaç sayfa tarandı / hatalı / anahtarlar / ortalama -->
+                        <div class="batch-summary-grid">
+                            <div class="bs-cell"><div class="bs-num" id="bsTotalPages">0</div><div class="bs-lbl" data-i18n="bs_total_pages">Toplam Sayfa</div></div>
+                            <div class="bs-cell"><div class="bs-num bs-ok" id="bsProcessed">0</div><div class="bs-lbl" data-i18n="bs_processed">Başarılı</div></div>
+                            <div class="bs-cell"><div class="bs-num bs-err" id="bsFailed">0</div><div class="bs-lbl" data-i18n="bs_failed">Hatalı</div></div>
+                            <div class="bs-cell"><div class="bs-num bs-info" id="bsScored">0</div><div class="bs-lbl" data-i18n="bs_scored">Skorlanan</div></div>
+                            <div class="bs-cell"><div class="bs-num bs-info" id="bsAvg">—</div><div class="bs-lbl" data-i18n="bs_avg">Ortalama</div></div>
+                        </div>
+
+                        <!-- Cevap anahtarları (auto modda CEVAP'tan çıkarılanlar) -->
+                        <div id="bsAutoKeysWrap" style="display:none; margin-top:0.75rem;">
+                            <p style="margin-bottom:0.25rem;"><strong data-i18n="bs_keys_detected">Tespit Edilen Cevap Anahtarları:</strong></p>
+                            <div id="bsAutoKeys" style="display:flex; flex-wrap:wrap; gap:0.5rem; font-size:0.85rem;"></div>
+                        </div>
+
+                        <!-- Hata mesajı -->
+                        <p id="bsError" style="display:none; color:var(--pico-del-color); margin-top:0.5rem;"></p>
+                    </article>
+
+                    <!-- Sihirbaz stiling -->
+                    <style>
+                        .batch-summary-grid {
+                            display: grid;
+                            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+                            gap: 0.5rem;
+                            margin-top: 0.5rem;
+                        }
+                        .bs-cell {
+                            text-align: center;
+                            padding: 0.75rem 0.5rem;
+                            background: var(--pico-card-sectioning-background-color, rgba(0,0,0,0.03));
+                            border: 1px solid var(--pico-muted-border-color);
+                            border-radius: 8px;
+                        }
+                        .bs-num { font-size: 1.5rem; font-weight: 700; line-height: 1; }
+                        .bs-ok   { color: var(--pico-ins-color, #16a34a); }
+                        .bs-err  { color: var(--pico-del-color, #dc2626); }
+                        .bs-info { color: var(--pico-primary, #2563eb); }
+                        .bs-lbl { font-size: 0.75rem; color: var(--pico-muted-color); margin-top: 0.25rem; }
+                        @media (max-width: 480px) {
+                            .bs-num { font-size: 1.2rem; }
+                            .bs-cell { padding: 0.5rem 0.25rem; }
+                        }
+                    </style>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div id="results" class="section-content">
+                <!-- Üst toolbar: seçim sayısı + toplu işlemler (sınava aktar / sil) -->
+                <div id="resultsToolbar" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; margin-bottom:0.75rem; padding:0.5rem 0.75rem; border:1px solid var(--pico-muted-border-color); border-radius:8px; background:var(--pico-card-background-color);">
+                    <label style="display:flex; align-items:center; gap:0.5rem; margin:0; cursor:pointer;">
+                        <input type="checkbox" id="selectAllResultsCb" style="margin:0;">
+                        <span style="font-size:0.85rem;"><span id="selectedCountLabel">0</span> <span data-i18n="bulk_selected">seçili</span></span>
+                    </label>
+                    <div style="flex:1;"></div>
+                    <button id="bulkAssignBtn" class="outline" style="width:auto; margin:0; padding:0.35rem 0.8rem;" disabled>
+                        <i class="ph ph-link"></i> <span data-i18n="bulk_assign">Seçilenleri Sınava Aktar</span>
+                    </button>
+                    <button id="bulkDeleteBtn" class="btn-danger" style="width:auto; margin:0; padding:0.35rem 0.8rem;" disabled>
+                        <i class="ph ph-trash"></i> <span data-i18n="bulk_delete">Seçilenleri Sil</span>
+                    </button>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; flex: 1;">
+                        <div class="search-container" style="margin: 0; min-width: 200px;">
+                            <i class="ph ph-magnifying-glass"></i>
+                            <input type="search" id="resultSearchInput" data-i18n-placeholder="search_res" placeholder="İsim veya numara...">
+                        </div>
+                        <input type="date" id="filterDateFrom" style="margin: 0; width: auto;" title="Başlangıç Tarihi">
+                        <input type="date" id="filterDateTo" style="margin: 0; width: auto;" title="Bitiş Tarihi">
+                        <select id="filterClass" style="margin: 0; width: auto; min-width: 150px;">
+                            <option value="" data-i18n="all_classes">Tüm Sınıflar</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                        <button id="printBtn" class="secondary btn-print" style="width: auto; margin: 0;" onclick="printResults()"><i class="ph ph-printer"></i> <span data-i18n="btn_print">Yazdır</span></button>
+                        <button id="exportCsvBtn" class="secondary" style="width: auto; margin: 0;"><i class="ph ph-download-simple"></i> <span data-i18n="btn_download_csv">CSV İndir</span></button>
+                    </div>
+                </div>
+
+                <!-- Batch akordion klasörleri buraya render edilir -->
+                <div id="batchFoldersContainer">
+                    <p style="text-align:center; color:var(--pico-muted-color); padding:2rem 0;" data-i18n="loading">Yükleniyor...</p>
+                </div>
+
+                <style>
+                    .batch-folder {
+                        margin-bottom: 0.75rem;
+                        border: 1px solid var(--pico-muted-border-color);
+                        border-radius: 8px;
+                        overflow: hidden;
+                        background: var(--pico-card-background-color);
+                    }
+                    .batch-folder-header {
+                        display: flex;
+                        align-items: center;
+                        gap: 0.75rem;
+                        padding: 0.65rem 0.9rem;
+                        cursor: pointer;
+                        background: var(--pico-card-sectioning-background-color, rgba(0,0,0,0.03));
+                        user-select: none;
+                    }
+                    .batch-folder-header:hover { background: rgba(0,0,0,0.05); }
+                    [data-theme="dark"] .batch-folder-header:hover { background: rgba(255,255,255,0.05); }
+                    .batch-folder-header i.caret {
+                        transition: transform 0.2s;
+                        font-size: 1rem;
+                    }
+                    .batch-folder.open .batch-folder-header i.caret { transform: rotate(90deg); }
+                    .batch-folder-title { flex: 1; font-weight: 600; font-size: 0.95rem; }
+                    .batch-folder-meta {
+                        display: flex; align-items: center; gap: 0.5rem;
+                        font-size: 0.78rem;
+                        color: var(--pico-muted-color);
+                        flex-wrap: wrap;
+                    }
+                    .batch-folder-body {
+                        display: none;
+                        padding: 0.5rem 0.5rem 0.75rem;
+                        overflow-x: auto;
+                    }
+                    .batch-folder.open .batch-folder-body { display: block; }
+                    .batch-folder-body table { margin-bottom: 0; }
+                    .badge-method {
+                        font-size: 0.7rem;
+                        padding: 0.1rem 0.45rem;
+                        border-radius: 10px;
+                        background: rgba(0,0,0,0.06);
+                        color: var(--pico-color);
+                    }
+                    [data-theme="dark"] .badge-method { background: rgba(255,255,255,0.08); }
+                    .badge-method.quick { background: #fde68a; color: #92400e; }
+                    [data-theme="dark"] .badge-method.quick { background: rgba(253, 230, 138, 0.15); color: #fcd34d; }
+                    .badge-exam-empty { color: var(--pico-muted-color); font-style: italic; }
+
+                    /* Alt klasör (PDF başına) — iç içe görünüm */
+                    .sub-folder {
+                        margin: 0.5rem 0;
+                        border: 1px dashed var(--pico-muted-border-color);
+                        border-radius: 6px;
+                        background: rgba(0,0,0,0.015);
+                    }
+                    [data-theme="dark"] .sub-folder { background: rgba(255,255,255,0.02); }
+                    .sub-folder-header {
+                        display: flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                        padding: 0.45rem 0.7rem;
+                        cursor: pointer;
+                        user-select: none;
+                        font-size: 0.85rem;
+                    }
+                    .sub-folder-header .caret { transition: transform 0.2s; font-size: 0.85rem; }
+                    .sub-folder[data-open="true"] > .sub-folder-header .caret { transform: rotate(90deg); }
+                    .sub-folder-title { flex: 1; font-weight: 600; word-break: break-all; }
+                    .sub-folder-meta { font-size: 0.75rem; color: var(--pico-muted-color); }
+                    .sub-folder-body { display: none; padding: 0 0.5rem 0.5rem; overflow-x: auto; }
+                    .sub-folder[data-open="true"] > .sub-folder-body { display: block; }
+                </style>
+                <!-- Yedek: eski tek-tablo (gizli, sadece print/CSV için kullanılabilir) -->
+                <div class="overflow-auto" style="display:none;">
+                    <table role="grid" id="resultsTable" hidden>
+                        <thead>
+                            <tr>
+                                <th data-i18n="th_name">Ad Soyad</th>
+                                <th data-i18n="th_student_no">Öğrenci No</th>
+                                <th data-i18n="th_group">Grup</th>
+                                <th data-i18n="th_correct">Doğru</th>
+                                <th data-i18n="th_wrong">Yanlış</th>
+                                <th data-i18n="th_percent">Yüzde</th>
+                                <th data-i18n="th_date">Tarih</th>
+                                <th data-i18n="col_exam">Sınav</th>
+                                <th data-i18n="col_method">Yöntem</th>
+                                <th data-i18n="col_actions">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+
+    <!-- Modal for details -->
+    <dialog id="detailModal">
+        <article>
+            <header>
+                <button aria-label="Kapat" rel="prev" id="closeModalBtn" style="float: right;"></button>
+                <h3 style="margin: 0;">Sonuç Detayları</h3>
+            </header>
+            <div id="detailModalContent"></div>
+        </article>
+    </dialog>
+
+    <!-- ★ Sınava Aktar Dialog'u -->
+    <!-- ★ Hızlı tarama klasöründen Sınav Oluştur Modal -->
+    <dialog id="createExamFromBatchModal">
+        <article style="max-width:500px;">
+            <header>
+                <button aria-label="Kapat" rel="prev" style="float:right;" onclick="document.getElementById('createExamFromBatchModal').removeAttribute('open')"></button>
+                <h3 style="margin:0;" data-i18n="create_exam_from_batch">Bu Klasörden Sınav Oluştur</h3>
+            </header>
+            <p style="color:var(--pico-muted-color); margin-bottom:0.75rem;" data-i18n="create_exam_from_batch_help">
+                Bu klasördeki sonuçlar yeni oluşturulan sınava bağlanacak.
+            </p>
+            <form id="createExamFromBatchForm">
+                <input type="hidden" id="cefbBatchId">
+
+                <label for="cefbExamName" data-i18n="exam_name">Sınav Adı</label>
+                <input type="text" id="cefbExamName" required>
+
+                <label for="cefbClassSelect" data-i18n="select_class">Sınıf Seç</label>
+                <select id="cefbClassSelect" required>
+                    <option value="" data-i18n="select_class">Sınıf Seç...</option>
+                </select>
+
+                <label style="display:flex; align-items:center; gap:0.5rem; margin:0.5rem 0;">
+                    <input type="checkbox" id="cefbAutoKey" style="margin:0;" checked>
+                    <span><strong data-i18n="cefb_use_auto_key">Tarama sırasında tespit edilen cevap anahtarını kullan</strong>
+                        <small style="display:block; color:var(--pico-muted-color); font-size:0.78rem;" data-i18n="cefb_use_auto_key_hint">CEVAP sayfalarından otomatik çıkarılan anahtarlar varsa onlar kullanılır.</small>
+                    </span>
+                </label>
+
+                <div style="display:flex; gap:0.5rem; justify-content:flex-end; margin-top:1rem;">
+                    <button type="button" class="secondary" style="width:auto; margin:0;" onclick="document.getElementById('createExamFromBatchModal').removeAttribute('open')" data-i18n="btn_cancel">İptal</button>
+                    <button type="submit" style="width:auto; margin:0;" data-i18n="btn_create_exam">Sınav Oluştur</button>
+                </div>
+            </form>
+        </article>
+    </dialog>
+
+    <dialog id="assignExamModal">
+        <article style="max-width:480px;">
+            <header>
+                <button aria-label="Kapat" rel="prev" style="float:right;" onclick="document.getElementById('assignExamModal').removeAttribute('open')"></button>
+                <h3 id="assignExamTitle" style="margin:0;" data-i18n="assign_to_exam">Sınava Aktar</h3>
+            </header>
+            <p id="assignExamHelp" style="color:var(--pico-muted-color); margin-bottom:0.5rem;"></p>
+            <select id="assignExamSelect" style="margin-bottom:0.75rem;">
+                <option value="">— <span data-i18n="select_exam_for_assign">Sınav seçin</span> —</option>
+            </select>
+            <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
+                <button class="secondary" style="width:auto; margin:0;" onclick="document.getElementById('assignExamModal').removeAttribute('open')">İptal</button>
+                <button id="assignExamConfirmBtn" style="width:auto; margin:0;" data-i18n="assign_to_exam">Sınava Aktar</button>
+            </div>
+        </article>
+    </dialog>
+
+    <!-- ★ Marked Image Viewer Modal — detailModal ile tutarlı stiling -->
+    <dialog id="markedImageModal">
+        <article style="max-width: 95vw;">
+            <header style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                <h3 style="margin: 0;" id="markedImageTitle" data-i18n="marked_title">İşaretli Görsel</h3>
+                <div style="display:flex; gap:0.25rem;">
+                    <button class="outline secondary" id="markedZoomOut" style="width:auto; margin:0; padding:0.2rem 0.5rem; font-size:0.85rem;" title="Uzaklaştır" data-i18n-title="marked_zoom_out"><i class="ph ph-minus"></i></button>
+                    <button class="outline secondary" id="markedZoomReset" style="width:auto; margin:0; padding:0.2rem 0.5rem; font-size:0.85rem;" title="Sıfırla" data-i18n-title="marked_zoom_reset">100%</button>
+                    <button class="outline secondary" id="markedZoomIn" style="width:auto; margin:0; padding:0.2rem 0.5rem; font-size:0.85rem;" title="Yakınlaştır" data-i18n-title="marked_zoom_in"><i class="ph ph-plus"></i></button>
+                    <button aria-label="Kapat" rel="prev" id="markedImageCloseBtn" style="width:auto; margin:0;" onclick="document.getElementById('markedImageModal').removeAttribute('open')"></button>
+                </div>
+            </header>
+            <!-- Container: zoom + pan -->
+            <div id="markedImageContainer" style="display:flex; justify-content:center; align-items:flex-start; background:#111; border-radius:8px; padding:0.5rem; min-height:200px; max-height:75vh; overflow:auto; cursor:grab; position:relative;">
+                <img id="markedImageImg" src="" alt="Annotated marked image" style="max-width:100%; height:auto; display:block; margin: 0 auto; transform-origin: top left; transition: transform 0.15s ease-out;">
+                <div id="markedImageLoading" style="color:#fff; padding:2rem; align-self:center;" data-i18n="marked_loading">Görsel yükleniyor…</div>
+            </div>
+            <!-- Renk legend -->
+            <div style="display:flex; flex-wrap:wrap; gap:0.75rem; margin-top:0.75rem; font-size:0.8rem;">
+                <span style="display:inline-flex; align-items:center; gap:0.25rem;"><i class="ph ph-check" style="color:#16a34a; font-weight:bold;"></i> <span data-i18n="legend_correct">Doğru cevap</span></span>
+                <span style="display:inline-flex; align-items:center; gap:0.25rem;"><span style="display:inline-block; width:14px; height:14px; border:2px solid #16a34a; border-radius:50%; background:rgba(22,163,74,0.35);"></span> <span data-i18n="legend_correct_pos">Doğru cevap konumu (yanlış)</span></span>
+                <span style="display:inline-flex; align-items:center; gap:0.25rem;"><span style="display:inline-block; width:14px; height:14px; border:2px solid #eab308; border-radius:50%; background:rgba(234,179,8,0.35);"></span> <span data-i18n="legend_blank_pos">Boş (doğru cevap)</span></span>
+                <span style="display:inline-flex; align-items:center; gap:0.25rem;"><i class="ph ph-x" style="color:#dc2626; font-weight:bold;"></i> <span data-i18n="legend_wrong">Öğrenci yanlış işaret</span></span>
+                <span style="display:inline-flex; align-items:center; gap:0.25rem;"><span style="display:inline-block; width:14px; height:14px; background:#1e64dc; border-radius:50%;"></span> <span data-i18n="legend_sn_fn_tg">SN/FN/TG işareti</span></span>
+                <span style="display:inline-flex; align-items:center; gap:0.25rem;"><span style="display:inline-block; width:14px; height:14px; background:#dc2626; border-radius:50%;"></span> <span data-i18n="legend_ambig">Belirsiz (#)</span></span>
+            </div>
+        </article>
+    </dialog>
+
+    <!-- Ambiguity '#' marker stilleri -->
+    <style>
+        .ambig-marker {
+            display: inline-block;
+            background: #fee2e2;
+            color: #b91c1c;
+            font-weight: 700;
+            padding: 0 0.35em;
+            border-radius: 4px;
+            border: 1px solid #fca5a5;
+            line-height: 1.4;
+        }
+        [data-theme="dark"] .ambig-marker {
+            background: rgba(220, 38, 38, 0.25);
+            color: #fca5a5;
+            border-color: rgba(252, 165, 165, 0.5);
+        }
+    </style>
+
+    <!-- Marked viewer global helper — tablo satırlarındaki butonlardan çağrılır -->
+    <script type="module">
+        import { fetchBlobAuthed, t } from './auth.js?v=2';
+        let _markedImageBlobUrl = null;
+        let _markedZoom = 1;
+        function _applyMarkedZoom() {
+            const img = document.getElementById('markedImageImg');
+            if (!img) return;
+            img.style.transform = `scale(${_markedZoom})`;
+            const reset = document.getElementById('markedZoomReset');
+            if (reset) reset.textContent = Math.round(_markedZoom * 100) + '%';
+        }
+        document.getElementById('markedZoomIn')?.addEventListener('click', () => {
+            _markedZoom = Math.min(5, _markedZoom + 0.25);
+            _applyMarkedZoom();
+        });
+        document.getElementById('markedZoomOut')?.addEventListener('click', () => {
+            _markedZoom = Math.max(0.25, _markedZoom - 0.25);
+            _applyMarkedZoom();
+        });
+        document.getElementById('markedZoomReset')?.addEventListener('click', () => {
+            _markedZoom = 1;
+            _applyMarkedZoom();
+        });
+        // Ctrl + wheel ile zoom
+        document.getElementById('markedImageContainer')?.addEventListener('wheel', (e) => {
+            if (e.ctrlKey) {
+                e.preventDefault();
+                _markedZoom = Math.min(5, Math.max(0.25, _markedZoom + (e.deltaY < 0 ? 0.1 : -0.1)));
+                _applyMarkedZoom();
+            }
+        }, { passive: false });
+        // Mouse drag ile pan (sürükle-bırak gibi)
+        (function() {
+            const c = document.getElementById('markedImageContainer');
+            if (!c) return;
+            let dragging = false, startX, startY, scrollX, scrollY;
+            c.addEventListener('mousedown', (e) => {
+                if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+                dragging = true;
+                startX = e.pageX; startY = e.pageY;
+                scrollX = c.scrollLeft; scrollY = c.scrollTop;
+                c.style.cursor = 'grabbing';
+            });
+            window.addEventListener('mouseup', () => { dragging = false; c.style.cursor = 'grab'; });
+            window.addEventListener('mousemove', (e) => {
+                if (!dragging) return;
+                c.scrollLeft = scrollX - (e.pageX - startX);
+                c.scrollTop = scrollY - (e.pageY - startY);
+            });
+        })();
+
+        window.showMarkedImage = async function (resultId, label) {
+            const modal   = document.getElementById('markedImageModal');
+            const img     = document.getElementById('markedImageImg');
+            const loading = document.getElementById('markedImageLoading');
+            const title   = document.getElementById('markedImageTitle');
+            // Önceki blob URL'i temizle
+            if (_markedImageBlobUrl) {
+                URL.revokeObjectURL(_markedImageBlobUrl);
+                _markedImageBlobUrl = null;
+            }
+            // Zoom'u sıfırla
+            _markedZoom = 1;
+            _applyMarkedZoom();
+            img.style.display = 'none';
+            img.src = '';
+            loading.style.display = 'block';
+            loading.textContent = t('marked_loading');
+            title.textContent = label ? `${t('marked_title')} — ${label}` : t('marked_title');
+            modal.setAttribute('open', 'true');
+            try {
+                _markedImageBlobUrl = await fetchBlobAuthed(`/api/scan-images/${resultId}`);
+                img.src = _markedImageBlobUrl;
+                img.style.display = 'block';
+                loading.style.display = 'none';
+            } catch (err) {
+                loading.textContent = `${t('marked_load_failed')}: ${err.message || err}`;
+            }
+        };
+    </script>
+
+    <script type="module">
+        import { requireAuth, logout, getName, apiFetch, apiUpload, fetchBlobAuthed, USE_MOCK, t } from './auth.js?v=2';
+
+        // --- Toast Bildirim Sistemi ---
+        // Toast container'ı oluştur
+        const toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container';
+        document.body.appendChild(toastContainer);
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            const icons = { success: 'ph-check-circle', error: 'ph-x-circle', info: 'ph-info', warning: 'ph-warning' };
+            toast.innerHTML = `<i class="ph ${icons[type] || icons.info}"></i> ${message}`;
+            toastContainer.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('toast-hide');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // 1. Yetki Kontrolü
+        requireAuth(['teacher', 'admin']);
+
+        // 2. Navbar Bilgileri
+        function updateUserNameDisplay() {
+            document.getElementById('userNameDisplay').textContent = t('welcome') + ', ' + (getName() || t('role_teacher'));
+        }
+        updateUserNameDisplay();
+        window.addEventListener('languageChanged', () => {
+            updateUserNameDisplay();
+            loadClasses();
+            loadExams();
+            loadExamsForScan();
+            loadResults();
+        });
+
+        document.getElementById('logoutBtn').addEventListener('click', logout);
+        
+        // 3. Sekme Geçiş Mantığı
+        const menuLinks = document.querySelectorAll('.menu a');
+        const sections = document.querySelectorAll('.section-content');
+
+        menuLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                menuLinks.forEach(l => l.classList.remove('active'));
+                sections.forEach(s => s.classList.remove('active'));
+                
+                link.classList.add('active');
+                const targetId = link.getAttribute('data-target');
+                document.getElementById(targetId).classList.add('active');
+                
+                // Mobilde tıklanınca menüyü kapat
+                if (window.innerWidth <= 768) {
+                    document.querySelector('.sidebar').classList.remove('mobile-open');
+                    const _ov = document.getElementById('sidebarOverlay');
+                    if (_ov) _ov.classList.remove('active');
+                }
+                
+                // Sekmeye tıklandığında ilgili verileri çek
+                if (targetId === 'classes') loadClasses();
+                if (targetId === 'exams') loadExams();
+                if (targetId === 'scan') loadExamsForScan();
+                if (targetId === 'results') loadResults();
+                if (targetId === 'dashboard') loadDashboardStats();
+            });
+        });
+
+        // Hamburger Menü Toggle
+        window.closeMobileSidebar = function() {
+            const sb = document.querySelector('.sidebar');
+            const ov = document.getElementById('sidebarOverlay');
+            if (sb) sb.classList.remove('mobile-open');
+            if (ov) ov.classList.remove('active');
+        };
+        document.getElementById('mobileMenuBtn').addEventListener('click', () => {
+            const _sb = document.querySelector('.sidebar');
+            const _ov = document.getElementById('sidebarOverlay');
+            const _open = _sb.classList.toggle('mobile-open');
+            if (_ov) _ov.classList.toggle('active', _open);
+        });
+
+        // Ekran büyüyünce admin panelinde kullanıcı adını göster
+        if (window.innerWidth > 768) {
+            document.getElementById('userNameDisplay').style.display = 'inline';
+        }
+
+        // Skeleton Function
+        function showSkeleton(tbodyId, columns) {
+            const tbody = document.getElementById(tbodyId);
+            let html = '';
+            for(let i=0; i<3; i++) {
+                html += '<tr>';
+                for(let j=0; j<columns; j++) {
+                    html += `<td><span class="skeleton"></span></td>`;
+                }
+                html += '</tr>';
+            }
+            tbody.innerHTML = html;
+        }
+
+        // --- Bölüm 1: Dashboard ---
+        // Gerçek backend verisi ile doldurulan stat-card'lar + chart.
+        // Sahte örnek veriler kaldırıldı — veri yoksa empty-state gösterilir.
+        async function loadDashboardStats() {
+            try {
+                const classes = await apiFetch('/api/classes', {}, './mock-api/classes.json');
+                const exams   = await apiFetch('/api/exams',   {}, './mock-api/exams.json');
+                const results = await apiFetch('/api/results', {}, './mock-api/results.json');
+
+                document.getElementById('statClasses').textContent = (classes || []).length || 0;
+                document.getElementById('statExams').textContent   = (exams || []).length || 0;
+                document.getElementById('statScans').textContent   = (results || []).length || 0;
+                renderStatsChart(classes || [], exams || [], results || []);
+                renderDashboardClasses(classes || [], exams || [], results || []);
+                renderDashboardRecentResults(results || [], exams || []);
+            } catch (e) {
+                console.error('Dashboard yüklenirken hata:', e);
+                document.getElementById('statClasses').textContent = '0';
+                document.getElementById('statExams').textContent = '0';
+                document.getElementById('statScans').textContent = '0';
+                renderStatsChart([], [], []);
+                renderDashboardClasses([], [], []);
+                renderDashboardRecentResults([], []);
+            }
+        }
+
+        function renderDashboardClasses(classes, exams, results) {
+            const container = document.getElementById('dashboardClassesList');
+            if (!classes || !classes.length) {
+                container.innerHTML = '<p style="color: var(--pico-muted-color); font-size: 0.9rem;">Henüz sınıf yok.</p>';
+                return;
+            }
+
+            // Ortalama hesaplama mantığı
+            const examsByClass = {};
+            (exams || []).forEach(e => {
+                if(!examsByClass[e.class_id]) examsByClass[e.class_id] = [];
+                examsByClass[e.class_id].push(e.id);
+            });
+            
+            const resultsByExam = {};
+            (results || []).forEach(r => {
+                if(!resultsByExam[r.exam_id]) resultsByExam[r.exam_id] = [];
+                resultsByExam[r.exam_id].push(r.scoring ? r.scoring.percentage : 0);
+            });
+
+            const classAverages = {};
+            classes.forEach(c => {
+                const exIds = examsByClass[c.id] || [];
+                let total = 0;
+                let count = 0;
+                exIds.forEach(eid => {
+                    const res = resultsByExam[eid] || [];
+                    res.forEach(score => {
+                        total += score;
+                        count++;
+                    });
+                });
+                classAverages[c.id] = count > 0 ? (total / count).toFixed(1) : '-';
+            });
+
+            const topClasses = classes.slice(0, 5); // display top 5
+            container.innerHTML = topClasses.map(c => `
+                <article style="padding: 1rem; margin-bottom: 1rem; border-radius: var(--pico-border-radius); box-shadow: var(--pico-card-box-shadow); border: 1px solid var(--pico-muted-border-color); display: flex; justify-content: space-between; align-items: center; background: var(--pico-card-background-color);">
+                    <strong style="font-size: 0.95rem;">${c.name}</strong>
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <span style="font-size: 0.85rem; color: var(--pico-muted-color);" title="Öğrenci Sayısı"><i class="ph ph-users"></i> ${c.student_count || 0}</span>
+                        <span style="font-size: 1rem; font-weight: bold; color: var(--pico-primary);" title="Sınıf Ortalaması">${classAverages[c.id] !== '-' ? '%' + classAverages[c.id] : '-'}</span>
+                    </div>
+                </article>
+            `).join('');
+        }
+
+        function renderDashboardRecentResults(results, exams) {
+            const container = document.getElementById('dashboardRecentResultsList');
+            if (!results || !results.length) {
+                container.innerHTML = '<p style="color: var(--pico-muted-color); font-size: 0.9rem;">Henüz not/sonuç yok.</p>';
+                return;
+            }
+            
+            const sorted = [...results].sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)).slice(0, 4);
+            const examMap = {};
+            (exams || []).forEach(e => examMap[e.id] = e.name);
+
+            container.innerHTML = sorted.map(r => {
+                const examName = examMap[r.exam_id] || 'Sınavsız Tarama';
+                const score = r.scoring ? r.scoring.percentage : 0;
+                return `
+                <article style="padding: 1rem; margin-bottom: 1rem; border-radius: var(--pico-border-radius); box-shadow: var(--pico-card-box-shadow); border: 1px solid var(--pico-muted-border-color); display: flex; justify-content: space-between; align-items: center; background: var(--pico-card-background-color);">
+                    <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+                        <strong style="font-size: 0.95rem;">${r.full_name || 'İsimsiz'}</strong>
+                        <span style="font-size: 0.8rem; color: var(--pico-muted-color);">${examName}</span>
+                    </div>
+                    <span style="font-size: 1.1rem; font-weight: bold; color: var(--pico-primary);">${Number(score).toFixed(2)}</span>
+                </article>
+                `;
+            }).join('');
+        }
+
+        // Sayfa ilk yüklendiğinde dashboard'u doldur
+        loadDashboardStats();
+
+        // --- Bölüm 2: Sınıflar — sortable + filter ---
+        let _classesData = [];
+        const _teacherSort = { classes: {}, exams: {} };
+
+        window.sortTeacherTable = function(table, key) {
+            const s = _teacherSort[table];
+            if (s.key === key) s.dir = s.dir === 'asc' ? 'desc' : 'asc';
+            else { s.key = key; s.dir = 'asc'; }
+            if (table === 'classes') renderClasses();
+            else if (table === 'exams') renderExams();
+        };
+        function _sortByKey(arr, key, dir, accessor) {
+            const sign = dir === 'desc' ? -1 : 1;
+            return [...arr].sort((a, b) => {
+                const va = accessor(a, key), vb = accessor(b, key);
+                if (va == null && vb == null) return 0;
+                if (va == null) return 1;
+                if (vb == null) return -1;
+                if (va < vb) return -1 * sign;
+                if (va > vb) return  1 * sign;
+                return 0;
+            });
+        }
+        function _updateSortInds(tableId, sortState) {
+            document.querySelectorAll(`#${tableId} .sort-ind`).forEach(el => el.innerHTML = '');
+            if (!sortState.key) return;
+            const el = document.querySelector(`#${tableId} th[data-sort-key="${sortState.key}"] .sort-ind`);
+            if (el) el.innerHTML = sortState.dir === 'asc'
+                ? ' <i class="ph ph-caret-up" style="font-size:0.7em;"></i>'
+                : ' <i class="ph ph-caret-down" style="font-size:0.7em;"></i>';
+        }
+
+        function renderClasses() {
+            const tbody = document.getElementById('classesTableBody');
+            const q = (document.getElementById('teacherClassSearch')?.value || '').toLowerCase();
+            const filtered = _classesData.filter(c =>
+                !q || (c.name || '').toLowerCase().includes(q)
+            );
+            const s = _teacherSort.classes;
+            const sorted = s.key ? _sortByKey(filtered, s.key, s.dir, (r, k) => {
+                if (k === 'name')  return (r.name || '').toLowerCase();
+                if (k === 'count') return r.student_count ?? 0;
+            }) : filtered;
+            _updateSortInds('teacherClassesTable', s);
+            if (sorted.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="empty-state"><i class="ph ph-users-slash"></i>${t('msg_no_classes')}</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = sorted.map(cls => `
+                <tr>
+                    <td>${cls.name}</td>
+                    <td>${cls.student_count || 0}</td>
+                    <td><button class="outline secondary" style="padding:0.25rem 0.5rem; width: auto; margin:0;" onclick="showClassDetail(${cls.id})">${t('btn_detail')}</button></td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadClasses() {
+            showSkeleton('classesTableBody', 3);
+            try {
+                await new Promise(r => setTimeout(r, 300));
+                _classesData = await apiFetch('/api/classes', {}, './mock-api/classes.json') || [];
+
+                // Sınavlar sekmesindeki "Sınıf Seç" dropdown'unu güncelle (yan-etki)
+                const examClassSelect = document.getElementById('newExamClass');
+                if (examClassSelect) {
+                    examClassSelect.innerHTML = `<option value="">${t('select_class')}</option>`;
+                    _classesData.forEach(cls => {
+                        examClassSelect.innerHTML += `<option value="${cls.id}">${cls.name}</option>`;
+                    });
+                }
+                renderClasses();
+            } catch (e) {
+                document.getElementById('classesTableBody').innerHTML = `<tr><td colspan="3" class="empty-state"><i class="ph ph-warning-circle"></i>${t('msg_results_fail')}</td></tr>`;
+            }
+        }
+        document.getElementById('teacherClassSearch')?.addEventListener('input', renderClasses);
+        document.getElementById('teacherExamSearch')?.addEventListener('input', () => renderExamsTable());
+        document.getElementById('teacherExamStatusFilter')?.addEventListener('change', () => renderExamsTable());
+
+        // Filtreler toggle (collapsible) — teacher panelinde
+        document.querySelectorAll('.filter-toggle').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const panel = document.getElementById(btn.dataset.targetPanel);
+                if (!panel) return;
+                const open = panel.style.display !== 'none';
+                panel.style.display = open ? 'none' : 'block';
+                btn.classList.toggle('contrast', !open);
+            });
+        });
+
+        window.showClassDetail = async function(classId) {
+            try {
+                // Mock olarak class-1.json çağırıyoruz.
+                const classData = await apiFetch('/api/classes/' + classId, {}, './mock-api/class-1.json');
+                
+                document.querySelector('#detailModal h3').textContent = classData.name + ' - ' + t('th_student_count');
+                
+                let html = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <button class="outline secondary" onclick="document.getElementById('importCsvStudentFile').click()" style="width: auto; margin: 0;"><i class="ph ph-upload-simple"></i> CSV İçe Aktar</button>
+                        <input type="file" id="importCsvStudentFile" accept=".csv" style="display: none;" onchange="importCsvStudents(this, ${classId})">
+                    </div>
+                    
+                    <form id="addStudentToClassForm" onsubmit="addStudentToClass(event, ${classId})" style="margin-bottom: 1rem;">
+                        <div class="grid">
+                            <input type="text" id="newStudentName" placeholder="${t('name_placeholder')}" required>
+                            <input type="text" id="newStudentNo" placeholder="${t('th_student_no')}" required>
+                            <input type="email" id="newStudentEmail" placeholder="${t('email_placeholder')}">
+                            <button type="submit" style="width: auto;">${t('btn_add')}</button>
+                        </div>
+                    </form>
+                    <table role="grid"><thead><tr><th>${t('th_student_no')}</th><th>${t('th_name')}</th></tr></thead><tbody id="classStudentsTbody">
+                `;
+                classData.students.forEach(s => {
+                    html += `<tr><td>${s.student_number}</td><td>${s.full_name}</td></tr>`;
+                });
+                html += '</tbody></table>';
+                
+                document.getElementById('detailModalContent').innerHTML = html;
+                document.getElementById('detailModal').setAttribute('open', 'true');
+            } catch (err) {
+                showToast(t('msg_class_err'), 'error');
+            }
+        };
+
+        window.addStudentToClass = function(e, classId) {
+            e.preventDefault();
+            const name = document.getElementById('newStudentName').value;
+            const no = document.getElementById('newStudentNo').value;
+            
+            // Mock addition
+            const tbody = document.getElementById('classStudentsTbody');
+            tbody.innerHTML += `<tr><td>${no}</td><td>${name}</td></tr>`;
+            
+            showToast(t('msg_user_add'), 'success');
+            e.target.reset();
+        };
+
+        window.importCsvStudents = function(input, classId) {
+            if (input.files && input.files[0]) {
+                showToast('CSV dosyası işlendi ve öğrenciler eklendi!', 'success');
+                // Form inputunu sıfırlayalım ki aynı dosya tekrar seçilebilsin
+                input.value = '';
+                // Listeyi yenile simülasyonu
+                showClassDetail(classId);
+            }
+        };
+
+        document.getElementById('newClassForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('newClassName').value;
+            try {
+                // Mock POST isteği
+                await apiFetch('/api/classes', { method: 'POST', body: JSON.stringify({ name }) }, './mock-api/classes.json');
+                showToast(`"${name}" ${t('msg_class_ok')}`, 'success');
+                document.getElementById('newClassName').value = '';
+                loadClasses(); // Listeyi yenile
+                loadDashboardStats(); // Dashboard'u yenile
+            } catch (error) {
+                showToast(t('msg_class_err'), 'error');
+            }
+        });
+
+        // --- Bölüm 3: Sınavlar ---
+        let examsList = [];
+        // renderExams = renderExamsTable alias (sortTeacherTable için)
+        function renderExams() { renderExamsTable(); }
+
+        async function loadExams() {
+            showSkeleton('examsTableBody', 5);
+            try {
+                await new Promise(r => setTimeout(r, 300));
+                examsList = await apiFetch('/api/exams', {}, './mock-api/exams.json');
+                renderExamsTable();
+
+                // Şablon dropdown'ı doldur
+                try {
+                    const templates = await apiFetch('/api/templates', {}, './mock-api/templates.json');
+                    const tplSelect = document.getElementById('newExamTemplate');
+                    tplSelect.innerHTML = `<option value="">${t('select_template')}</option>`;
+                    templates.forEach(tpl => {
+                        tplSelect.innerHTML += `<option value="${tpl.name}">${tpl.name} (${tpl.question_count} soru)</option>`;
+                    });
+                } catch (tplErr) {
+                    console.warn('Şablonlar yüklenemedi:', tplErr);
+                }
+            } catch (e) {
+                document.getElementById('examsTableBody').innerHTML = `<tr><td colspan="5" class="empty-state"><i class="ph ph-warning-circle"></i>${t('msg_results_fail')}</td></tr>`;
+            }
+        }
+
+        function renderExamsTable() {
+            const tbody = document.getElementById('examsTableBody');
+            tbody.innerHTML = '';
+
+            // Filtre + sıralama
+            const q = (document.getElementById('teacherExamSearch')?.value || '').toLowerCase();
+            const status = document.getElementById('teacherExamStatusFilter')?.value || '';
+            let filtered = (examsList || []).filter(e =>
+                (!q || (e.name || '').toLowerCase().includes(q) || (e.class_name || '').toLowerCase().includes(q))
+                && (!status || (status === 'active' ? e.is_active : !e.is_active))
+            );
+            const s = _teacherSort.exams;
+            if (s.key) {
+                filtered = _sortByKey(filtered, s.key, s.dir, (r, k) => {
+                    if (k === 'name')   return (r.name || '').toLowerCase();
+                    if (k === 'class')  return (r.class_name || '').toLowerCase();
+                    if (k === 'qcount') return r.question_count ?? 0;
+                    if (k === 'status') return r.is_active ? 1 : 0;
+                });
+            }
+            _updateSortInds('teacherExamsTable', s);
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="empty-state"><i class="ph ph-file-dashed"></i>${t('msg_no_exams')}</td></tr>`;
+                return;
+            }
+
+            filtered.forEach((exam) => {
+                const idx = examsList.indexOf(exam);
+                const isChecked = exam.is_active ? 'checked' : '';
+                const badge = exam.is_active ? `<ins>${t('status_active')}</ins>` : `<del>${t('status_passive')}</del>`;
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${exam.name}</td>
+                        <td>${exam.class_name}</td>
+                        <td>${exam.question_count}</td>
+                        <td id="badge-${idx}">${badge}</td>
+                        <td>
+                            <label>
+                                <input type="checkbox" role="switch" ${isChecked} data-index="${idx}" class="exam-toggle">
+                            </label>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            // Toggle switch logic (PATCH isteği)
+            document.querySelectorAll('.exam-toggle').forEach(toggle => {
+                toggle.addEventListener('change', async (e) => {
+                    const idx = e.target.getAttribute('data-index');
+                    const exam = examsList[idx];
+                    const newStatus = e.target.checked;
+                    try {
+                        await apiFetch(`/api/exams/${exam.id}`, { 
+                            method: 'PATCH', 
+                            body: JSON.stringify({ is_active: newStatus }) 
+                        }, './mock-api/exams.json'); // Mock modda exams.json'u fallback veriyoruz, 200 OK taklidi için
+                        
+                        exam.is_active = newStatus;
+                        const badgeHtml = exam.is_active ? `<ins>${t('status_active')}</ins>` : `<del>${t('status_passive')}</del>`;
+                        document.getElementById(`badge-${idx}`).innerHTML = badgeHtml;
+                    } catch (err) {
+                        e.target.checked = !newStatus; // Hata alırsak UI'ı eski haline getir
+                        alert('Durum güncellenirken bir hata oluştu.');
+                    }
+                });
+            });
+        }
+
+        document.getElementById('newExamForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('newExamName').value;
+            const classSelect = document.getElementById('newExamClass');
+            const className = classSelect.options[classSelect.selectedIndex]?.text || '';
+            const classId = classSelect.value;
+            const template = document.getElementById('newExamTemplate').value;
+            const qCount = parseInt(document.getElementById('newExamQCount').value) || 0;
+
+            // Mock listeye ekle
+            const newExam = {
+                id: Date.now(),
+                name: name,
+                class_name: className,
+                class_id: parseInt(classId),
+                template: template,
+                question_count: qCount,
+                is_active: true
+            };
+            examsList.push(newExam);
+            renderExamsTable();
+
+            showToast(`"${name}" ${t('msg_exam_ok')}`, 'success');
+            document.getElementById('newExamForm').reset();
+            if (typeof generateVisualAnswerKeyGrid === 'function') {
+                generateVisualAnswerKeyGrid();
+            }
+            loadDashboardStats();
+            if (document.getElementById('results').classList.contains('active')) {
+                renderResultsTable();
+            }
+        });
+
+        // ==========================================================================
+        // Cevap Anahtarı Sihirbazı — bulk pattern + random + tümü-A + temizle + '-'
+        // ==========================================================================
+        const qCountInput      = document.getElementById('newExamQCount');
+        const examKeysTextarea = document.getElementById('newExamKeys');
+        const visualGrid       = document.getElementById('visualAnswerKeyGrid');
+        const templateSelect   = document.getElementById('newExamTemplate');
+        const vkBulkBar        = document.getElementById('vkBulkBar');
+        const vkBulkInput      = document.getElementById('vkBulkInput');
+        const vkBulkApply      = document.getElementById('vkBulkApply');
+        const vkRandomBtn      = document.getElementById('vkRandom');
+        const vkAllABtn        = document.getElementById('vkAllA');
+        const vkClearBtn       = document.getElementById('vkClear');
+        const VK_OPTIONS = ['A', 'B', 'C', 'D', 'E'];
+        let visualAnswers = {};
+
+        // ── textarea ↔ visualAnswers state senkronizasyonu (input event de tetikler)
+        function syncTextareaFromAnswers() {
+            // Sadece set edilmiş veya '-' olan değerleri JSON'a yaz; boşlar atılır.
+            const obj = {};
+            Object.keys(visualAnswers).forEach(k => {
+                if (visualAnswers[k]) obj[k] = visualAnswers[k];
+            });
+            examKeysTextarea.value = JSON.stringify(obj);
+            examKeysTextarea.dispatchEvent(new Event('change'));
+        }
+
+        function generateVisualAnswerKeyGrid() {
+            const count = parseInt(qCountInput.value) || 0;
+            visualGrid.innerHTML = '';
+
+            if (count <= 0) {
+                vkBulkBar.style.display = 'none';
+                visualGrid.innerHTML = `<p style="font-size:0.8rem; color:var(--pico-muted-color); margin:0;" data-i18n="visual_key_info">${t('visual_key_info')}</p>`;
+                return;
+            }
+            vkBulkBar.style.display = 'flex';
+
+            const frag = document.createDocumentFragment();
+            for (let i = 1; i <= count; i++) {
+                const row = document.createElement('div');
+                row.className = 'vk-row';
+
+                const label = document.createElement('span');
+                label.className = 'vk-label';
+                label.textContent = `${i}:`;
+                row.appendChild(label);
+
+                const selected = visualAnswers[i] || '';
+                VK_OPTIONS.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'vk-btn outline' + (selected === opt ? ' vk-selected' : '');
+                    btn.textContent = opt;
+                    btn.addEventListener('click', () => {
+                        visualAnswers[i] = (visualAnswers[i] === opt) ? '' : opt;
+                        syncTextareaFromAnswers();
+                        generateVisualAnswerKeyGrid();
+                    });
+                    row.appendChild(btn);
+                });
+
+                // '-' (boş, değerlendirme dışı) buton
+                const blankBtn = document.createElement('button');
+                blankBtn.type = 'button';
+                blankBtn.className = 'vk-btn vk-blank outline' + (selected === '-' ? ' vk-selected' : '');
+                blankBtn.textContent = '−';
+                blankBtn.title = t('vk_blank');
+                blankBtn.setAttribute('aria-label', t('vk_blank'));
+                blankBtn.addEventListener('click', () => {
+                    visualAnswers[i] = (visualAnswers[i] === '-') ? '' : '-';
+                    syncTextareaFromAnswers();
+                    generateVisualAnswerKeyGrid();
+                });
+                row.appendChild(blankBtn);
+
+                frag.appendChild(row);
+            }
+            visualGrid.appendChild(frag);
+        }
+
+        // ── Toplu işlemler
+
+        // Pattern'i normalize et: sadece A-E ve '-' geçerli; boşluk/virgül göz ardı.
+        function _normalizePattern(raw) {
+            if (!raw) return '';
+            const cleaned = String(raw).toUpperCase().replace(/[\s,;]/g, '');
+            // Tüm karakterler A-E veya '-' olmalı
+            if (!/^[A-E-]+$/.test(cleaned)) return null;
+            return cleaned;
+        }
+
+        vkBulkApply.addEventListener('click', () => {
+            const count = parseInt(qCountInput.value) || 0;
+            if (count <= 0) return;
+            const pattern = _normalizePattern(vkBulkInput.value);
+            if (pattern === null || pattern.length === 0) {
+                showToast(t('vk_invalid_pattern'), 'error');
+                return;
+            }
+            visualAnswers = {};
+            for (let i = 1; i <= count; i++) {
+                visualAnswers[i] = pattern[(i - 1) % pattern.length];
+            }
+            syncTextareaFromAnswers();
+            generateVisualAnswerKeyGrid();
+        });
+
+        vkRandomBtn.addEventListener('click', () => {
+            const count = parseInt(qCountInput.value) || 0;
+            if (count <= 0) return;
+            visualAnswers = {};
+            for (let i = 1; i <= count; i++) {
+                visualAnswers[i] = VK_OPTIONS[Math.floor(Math.random() * VK_OPTIONS.length)];
+            }
+            syncTextareaFromAnswers();
+            generateVisualAnswerKeyGrid();
+        });
+
+        vkAllABtn.addEventListener('click', () => {
+            const count = parseInt(qCountInput.value) || 0;
+            if (count <= 0) return;
+            visualAnswers = {};
+            for (let i = 1; i <= count; i++) visualAnswers[i] = 'A';
+            syncTextareaFromAnswers();
+            generateVisualAnswerKeyGrid();
+        });
+
+        vkClearBtn.addEventListener('click', () => {
+            visualAnswers = {};
+            syncTextareaFromAnswers();
+            generateVisualAnswerKeyGrid();
+        });
+
+        // ─── Sınavdan cevap anahtarı yükle ───
+        const vkLoadExamSelect = document.getElementById('vkLoadFromExam');
+        const vkLoadExamBtn = document.getElementById('vkLoadFromExamBtn');
+        async function _populateVkExamList() {
+            try {
+                const exams = await apiFetch('/api/exams', {}, './mock-api/exams.json') || [];
+                vkLoadExamSelect.innerHTML = `<option value="">— ${t('vk_load_exam_hint')} —</option>`;
+                exams.forEach(ex => {
+                    vkLoadExamSelect.innerHTML += `<option value="${ex.id}">${ex.name}</option>`;
+                });
+            } catch (err) {
+                console.warn('Sınav listesi alınamadı:', err);
+            }
+        }
+        _populateVkExamList();
+
+        vkLoadExamBtn.addEventListener('click', async () => {
+            const examId = vkLoadExamSelect.value;
+            if (!examId) {
+                showToast(t('vk_load_exam_hint'), 'warning');
+                return;
+            }
+            try {
+                const exam = await apiFetch(`/api/exams/${examId}`);
+                const key = exam.answer_key;
+                if (!key || Object.keys(key).length === 0) {
+                    showToast(t('vk_load_no_key'), 'warning');
+                    return;
+                }
+                // Soru sayısını da güncelle (eğer girilmediyse veya küçükse)
+                const maxQ = Math.max(...Object.keys(key).map(k => parseInt(k, 10)).filter(n => !isNaN(n)));
+                if (maxQ && (!qCountInput.value || parseInt(qCountInput.value, 10) < maxQ)) {
+                    qCountInput.value = maxQ;
+                }
+                visualAnswers = { ...key };
+                syncTextareaFromAnswers();
+                generateVisualAnswerKeyGrid();
+                showToast(t('vk_load_success').replace('{n}', Object.keys(key).length), 'success');
+            } catch (err) {
+                showToast((err.message || err), 'error');
+            }
+        });
+
+        qCountInput.addEventListener('input', generateVisualAnswerKeyGrid);
+        examKeysTextarea.addEventListener('input', () => {
+            try {
+                visualAnswers = JSON.parse(examKeysTextarea.value || '{}');
+                generateVisualAnswerKeyGrid();
+            } catch(e) {}
+        });
+
+        // Şablon seçildiğinde soru sayısını otomatik doldurma
+        templateSelect.addEventListener('change', async () => {
+            const selectedName = templateSelect.value;
+            if (selectedName) {
+                try {
+                    const templates = await apiFetch('/api/templates', {}, './mock-api/templates.json');
+                    const found = templates.find(t => t.name === selectedName);
+                    if (found) {
+                        qCountInput.value = found.question_count;
+                        generateVisualAnswerKeyGrid();
+                    }
+                } catch(e) {
+                    console.warn('Şablon bilgisi alınamadı:', e);
+                }
+            }
+        });
+
+        // ==========================================================================
+        // İstatistik Grafiği (Chart.js)
+        // ==========================================================================
+        let statsChartInstance = null;
+        function renderStatsChart(classes, exams, results) {
+            const canvas = document.getElementById('statsChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            // Veriyi sınıf bazında grupla. Result'lara `class_id` veya
+            // (exam → class) eşlemesi gerekir; backend response'a göre adapt et.
+            // exam_id → class_id map'i:
+            const examIdToClassId = {};
+            (exams || []).forEach(e => { examIdToClassId[e.id] = e.class_id; });
+            // class_id → [percentages]
+            const byClass = {};
+            (results || []).forEach(r => {
+                if (!r || !r.scoring || r.scoring.percentage == null) return;
+                const cid = r.class_id ?? examIdToClassId[r.exam_id];
+                if (!cid) return;
+                (byClass[cid] = byClass[cid] || []).push(Number(r.scoring.percentage));
+            });
+            const labels = [];
+            const data = [];
+            (classes || []).forEach(c => {
+                const pcts = byClass[c.id] || [];
+                if (pcts.length === 0) return; // o sınıfta skor yoksa atla
+                const avg = pcts.reduce((a, b) => a + b, 0) / pcts.length;
+                labels.push(c.name || `Sınıf #${c.id}`);
+                data.push(Number(avg.toFixed(1)));
+            });
+
+            if (statsChartInstance) statsChartInstance.destroy();
+
+            // Veri yoksa canvas yerine empty-state göster
+            const emptyMsg = document.getElementById('chartEmptyState');
+            if (labels.length === 0) {
+                canvas.style.display = 'none';
+                if (!emptyMsg) {
+                    const p = document.createElement('p');
+                    p.id = 'chartEmptyState';
+                    p.style.cssText = 'text-align:center; color:var(--pico-muted-color); padding:2rem 0; margin:0;';
+                    p.textContent = t('msg_no_results') || 'Henüz veri yok.';
+                    canvas.parentNode.appendChild(p);
+                }
+                return;
+            }
+            if (emptyMsg) emptyMsg.remove();
+            canvas.style.display = '';
+
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const textColor = isDark ? '#f8fafc' : '#334155';
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
+
+            statsChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: t('chart_avg_score') || 'Ortalama Puan (%)',
+                        data: data,
+                        backgroundColor: 'rgba(46, 158, 110, 0.7)',
+                        borderColor: 'rgb(46, 158, 110)',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: { color: textColor },
+                            grid: { color: gridColor }
+                        },
+                        x: {
+                            ticks: { color: textColor },
+                            grid: { display: false }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: { color: textColor }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ==========================================================================
+        // Gerçek Zamanlı Güncelleme (WebSocket — backend henüz desteklemiyor)
+        //
+        // Mock modda kullanılan sahte öğrenci enjeksiyonu KALDIRILDI — gerçek
+        // veri yokken UI'da hayalet veri görünmesini engeller.
+        // İleride backend `/ws` endpoint'ini açtığında bu yeniden açılabilir.
+        // ==========================================================================
+        function initRealtimeUpdates() {
+            // İleride backend `/ws` endpoint'ini açtığında bu blok aktif edilir:
+            // const ws = new WebSocket(BASE_URL.replace('http', 'ws') + '/ws');
+            // ws.onmessage = (event) => { ... };
+        }
+        initRealtimeUpdates();
+
+        // --- Bölüm 4: Tara ---
+        async function loadExamsForScan() {
+            try {
+                const exams = await apiFetch('/api/exams', {}, './mock-api/exams.json');
+                const select = document.getElementById('scanExamSelect');
+                select.innerHTML = `<option value="">${t('select_exam')}</option>`;
+                exams.forEach(ex => {
+                    if (ex.is_active) {
+                        select.innerHTML += `<option value="${ex.id}">${ex.name}</option>`;
+                    }
+                });
+            } catch (e) {
+                console.error("Sınavlar dropdown'a yüklenemedi.");
+            }
+        }
+
+        // Dosya Önizleme (Çoklu)
+        document.getElementById('scanFileInput').addEventListener('change', function(e) {
+            const files = e.target.files;
+            const container = document.getElementById('filePreviewContainer');
+            const grid = document.getElementById('multiPreviewGrid');
+            const badge = document.getElementById('fileCountBadge');
+            
+            grid.innerHTML = ''; // Temizle
+            
+            if (files && files.length > 0) {
+                badge.textContent = `(${files.length} Dosya)`;
+                container.style.display = 'block';
+                
+                Array.from(files).forEach(file => {
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = function(evt) {
+                            const img = document.createElement('img');
+                            img.src = evt.target.result;
+                            img.style.width = '60px';
+                            img.style.height = '80px';
+                            img.style.objectFit = 'cover';
+                            img.style.borderRadius = '4px';
+                            img.style.border = '1px solid #ccc';
+                            img.title = file.name;
+                            grid.appendChild(img);
+                        };
+                        reader.readAsDataURL(file);
+                    } else {
+                        // PDF veya diğer dosyalar için ikon/isim
+                        const div = document.createElement('div');
+                        div.style.width = '60px';
+                        div.style.height = '80px';
+                        div.style.display = 'flex';
+                        div.style.flexDirection = 'column';
+                        div.style.alignItems = 'center';
+                        div.style.justifyContent = 'center';
+                        div.style.background = '#e2e8f0';
+                        div.style.borderRadius = '4px';
+                        div.style.fontSize = '0.6rem';
+                        div.style.textAlign = 'center';
+                        div.style.overflow = 'hidden';
+                        div.innerHTML = `<i class="ph ph-file-pdf" style="font-size:1.5rem; color:#ef4444;"></i><span style="word-break:break-all;">${file.name}</span>`;
+                        grid.appendChild(div);
+                    }
+                });
+            } else {
+                container.style.display = 'none';
+                badge.textContent = '';
+            }
+        });
+
+        // ── Phase label çevirileri — i18n sözlüğüne bağlı, dil değiştiğinde de güncel
+        function phaseLabel(status) {
+            return t('phase_' + status) || status;
+        }
+
+        // ── Tarama modu geçişi (sınavla / hızlı tarama)
+        let scanMode = 'exam'; // 'exam' | 'quick'
+        const scanModeExamBtn = document.getElementById('scanModeExamBtn');
+        const scanModeQuickBtn = document.getElementById('scanModeQuickBtn');
+        const scanExamModeFields = document.getElementById('scanExamModeFields');
+        const scanQuickModeFields = document.getElementById('scanQuickModeFields');
+        function setScanMode(mode) {
+            scanMode = mode;
+            const isExam = mode === 'exam';
+            scanExamModeFields.style.display = isExam ? '' : 'none';
+            scanQuickModeFields.style.display = isExam ? 'none' : '';
+            // Buton görünümü
+            scanModeExamBtn.classList.toggle('contrast', isExam);
+            scanModeExamBtn.classList.toggle('secondary', !isExam);
+            scanModeExamBtn.classList.toggle('outline', !isExam);
+            scanModeQuickBtn.classList.toggle('contrast', !isExam);
+            scanModeQuickBtn.classList.toggle('secondary', isExam);
+            scanModeQuickBtn.classList.toggle('outline', isExam);
+            // Field required güncelle
+            document.getElementById('scanExamSelect').required = isExam;
+            // Hızlı modda template doldur
+            if (!isExam) loadTemplatesForQuickScan();
+        }
+        scanModeExamBtn.addEventListener('click', () => setScanMode('exam'));
+        scanModeQuickBtn.addEventListener('click', () => setScanMode('quick'));
+
+        // Şablon listesini hızlı taramada doldur (bir kere)
+        let quickTemplatesLoaded = false;
+        let _quickTemplatesCache = [];
+        async function loadTemplatesForQuickScan() {
+            if (quickTemplatesLoaded) return;
+            try {
+                const tpls = await apiFetch('/api/templates', {}, './mock-api/templates.json');
+                _quickTemplatesCache = tpls || [];
+                const select = document.getElementById('quickTemplateSelect');
+                select.innerHTML = `<option value="">— ${t('select_template')} —</option>`;
+                _quickTemplatesCache.forEach(tpl => {
+                    select.innerHTML += `<option value="${tpl.name}" data-qc="${tpl.question_count || ''}">${tpl.name}${tpl.question_count ? ' (' + tpl.question_count + ' soru)' : ''}</option>`;
+                });
+                quickTemplatesLoaded = true;
+            } catch (e) {
+                console.warn('Şablon listesi alınamadı:', e);
+            }
+        }
+        // Şablon seçilince soru sayısı otomatik dolar (kullanıcı override edebilir)
+        document.getElementById('quickTemplateSelect')?.addEventListener('change', (e) => {
+            const opt = e.target.selectedOptions?.[0];
+            const qc = opt?.dataset?.qc;
+            const qcInput = document.getElementById('quickQuestionCount');
+            if (qc && qcInput && !qcInput.dataset.userTouched) {
+                qcInput.placeholder = qc;
+            }
+        });
+        // Kullanıcı manuel değer girerse "userTouched" işaretle, otomatik doldurma yapma
+        document.getElementById('quickQuestionCount')?.addEventListener('input', (e) => {
+            e.target.dataset.userTouched = e.target.value ? '1' : '';
+        });
+
+        // Async batch handler — gerçek backend /api/scan/batch/start endpoint'ine bağlı
+        document.getElementById('scanForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('scanBtn');
+            const spinner = document.getElementById('scanSpinner');
+            const examSelect = document.getElementById('scanExamSelect');
+            const fileInput = document.getElementById('scanFileInput');
+            const autoKeyToggle = document.getElementById('autoKeyToggle');
+            const progressBar = document.getElementById('scanProgress');
+            const progressText = document.getElementById('scanProgressText');
+            const phaseText = document.getElementById('scanPhaseText');
+
+            // Mod kontrolü
+            if (scanMode === 'exam') {
+                if (!examSelect.value || fileInput.files.length === 0) return;
+            } else {
+                const qt = document.getElementById('quickTemplateSelect').value;
+                if (!qt || fileInput.files.length === 0) {
+                    showToast(t('select_template'), 'warning');
+                    return;
+                }
+            }
+
+            btn.disabled = true;
+            spinner.style.display = 'block';
+            document.getElementById('scanResultCard').style.display = 'none';
+
+            progressBar.style.display = 'block';
+            progressText.style.display = 'block';
+            phaseText.style.display = 'block';
+            progressBar.max = 100;
+            progressBar.value = 0;
+            progressText.textContent = '0%';
+            phaseText.textContent = phaseLabel('pending');
+            // Cancel butonunu göster + handler bağla (batch_id alındıktan sonra aktif olur)
+            const cancelWrap = document.getElementById('scanCancelWrap');
+            const cancelBtn = document.getElementById('scanCancelBtn');
+            cancelWrap.style.display = 'block';
+            cancelBtn.disabled = true; // batch_id gelmeden tıklanamaz
+            window._activeBatchId = null;
+
+            // ── 1) Batch başlat
+            let batchId;
+            try {
+                const fd = new FormData();
+                for (const f of fileInput.files) fd.append('files', f);
+                if (scanMode === 'exam') {
+                    fd.append('exam_id', examSelect.value);
+                } else {
+                    // Hızlı tarama: template + opsiyonel answer key, exam_id YOK
+                    fd.append('template', document.getElementById('quickTemplateSelect').value);
+                    const qak = document.getElementById('quickAnswerKey').value.trim();
+                    if (qak) fd.append('answer_key', qak);
+                    // Soru sayısı — varsa optimizasyon için backend'e gönder
+                    const qcInput = document.getElementById('quickQuestionCount');
+                    const qc = parseInt(qcInput?.value || qcInput?.placeholder || '', 10);
+                    if (qc && qc > 0) fd.append('question_count', qc);
+                }
+                fd.append('mode', autoKeyToggle.checked ? 'auto' : 'single');
+                // İşaretli görsel üretilsin mi? (default kapalı = sadece skor/JSON)
+                fd.append('with_image', document.getElementById('withImageToggle').checked ? 'true' : 'false');
+                if (USE_MOCK) {
+                    // Mock modda backend yok — eski tek-seferlik akışa düş
+                    showToast(t('batch_mock_warning'), 'warning');
+                    spinner.style.display = 'none';
+                    btn.disabled = false;
+                    progressBar.style.display = 'none';
+                    progressText.style.display = 'none';
+                    phaseText.style.display = 'none';
+                    return;
+                }
+                const startRes = await apiUpload('/api/scan/batch/start', fd);
+                batchId = startRes.batch_id;
+                if (!batchId) throw new Error('batch_id dönmedi');
+                window._activeBatchId = batchId;
+                cancelBtn.disabled = false;
+                showToast(t('batch_started') + ' #' + batchId, 'info');
+            } catch (err) {
+                console.error('Batch başlatma hatası:', err);
+                showToast(t('batch_started_failed') + ': ' + (err.message || err), 'error');
+                spinner.style.display = 'none';
+                btn.disabled = false;
+                progressBar.style.display = 'none';
+                progressText.style.display = 'none';
+                phaseText.style.display = 'none';
+                cancelWrap.style.display = 'none';
+                return;
+            }
+
+            // ── 2) Polling — 2 sn'de bir status çek
+            let finalStatus = null;
+            try {
+                finalStatus = await pollBatchUntilDone(batchId, (status) => {
+                    progressBar.value = status.progress_pct || 0;
+                    progressText.textContent = `${status.processed_pages || 0} / ${status.total_pages || '?'} sayfa (%${status.progress_pct || 0})`;
+                    phaseText.textContent = phaseLabel(status.status);
+                });
+            } catch (err) {
+                console.error('Polling hatası:', err);
+                showToast(t('batch_polling_failed') + ': ' + (err.message || err), 'error');
+                spinner.style.display = 'none';
+                btn.disabled = false;
+                cancelWrap.style.display = 'none';
+                return;
+            }
+
+            spinner.style.display = 'none';
+            btn.disabled = false;
+            cancelWrap.style.display = 'none';
+            window._activeBatchId = null;
+
+            if (finalStatus.status === 'complete' || finalStatus.status === 'failed' || finalStatus.status === 'cancelled') {
+                // id alanını polling response'una merge et (oradaki ayrı endpoint id döner)
+                if (!finalStatus.id) finalStatus.id = batchId;
+
+                let batchResults = [];
+                try {
+                    batchResults = await apiFetch(`/api/scan/batch/${batchId}/results`);
+                } catch (err) {
+                    console.warn('Batch sonuçları çekilemedi:', err);
+                }
+                renderBatchSummary(finalStatus, batchResults);
+
+                if (finalStatus.status === 'complete') {
+                    let summary = `${finalStatus.processed_pages} ${t('batch_summary_pages')}`;
+                    if (finalStatus.failed_pages) summary += `, ${finalStatus.failed_pages} ${t('batch_summary_errors')}`;
+                    showToast(summary, 'success');
+
+                    // Otomatik sonuçlar sekmesine geç (2 sn sonra, kullanıcı özet kartı görsün)
+                    setTimeout(() => navigateToResults(batchId), 1500);
+                } else {
+                    showToast(t('batch_failed') + ': ' + (finalStatus.error_message || ''), 'error');
+                }
+
+                // Sonuç listesini de yenile (results sekmesi açıldığında en güncel olsun)
+                try { loadResults(); } catch (e) {}
+            }
+
+            // Sıfırla
+            setTimeout(() => {
+                progressBar.style.display = 'none';
+                progressText.style.display = 'none';
+                phaseText.style.display = 'none';
+                fileInput.value = '';
+                document.getElementById('filePreviewContainer').style.display = 'none';
+                document.getElementById('multiPreviewGrid').innerHTML = '';
+            }, 4000);
+        });
+
+        // ── Helper: batch tamamlanana kadar poll et
+        async function pollBatchUntilDone(batchId, onTick, intervalMs = 2000, maxMs = 30 * 60 * 1000) {
+            const deadline = Date.now() + maxMs;
+            while (Date.now() < deadline) {
+                const status = await apiFetch(`/api/scan/batch/${batchId}`);
+                if (onTick) onTick(status);
+                if (status.status === 'complete' || status.status === 'failed' || status.status === 'cancelled') {
+                    return status;
+                }
+                await new Promise(r => setTimeout(r, intervalMs));
+            }
+            throw new Error('Batch timeout');
+        }
+
+        // ── Cancel butonu handler — kullanıcı taramayı durdurmak isterse
+        document.getElementById('scanCancelBtn').addEventListener('click', async () => {
+            const id = window._activeBatchId;
+            if (!id) return;
+            if (!confirm(t('scan_cancel_confirm'))) return;
+            try {
+                await apiFetch(`/api/scan/batch/${id}/cancel`, { method: 'POST' });
+                showToast(t('scan_cancel_sent'), 'info');
+            } catch (err) {
+                showToast((err.message || err), 'error');
+            }
+        });
+
+        // ── Tarama özet kartı: batch durumundan (Status payload) doldurulur
+        let lastBatchId = null;
+        function renderBatchSummary(finalStatus, batchResults) {
+            const card = document.getElementById('scanResultCard');
+            const students = (batchResults || []).filter(r => !r.is_cevap_page && r.scoring);
+            const totalPages = finalStatus.total_pages ?? (batchResults?.length || 0);
+            const processed  = finalStatus.processed_pages ?? 0;
+            const failed     = finalStatus.failed_pages ?? 0;
+            const scored     = students.length;
+            const avg        = finalStatus.aggregate?.avg_percentage;
+
+            document.getElementById('bsTotalPages').textContent = totalPages;
+            document.getElementById('bsProcessed').textContent  = processed;
+            document.getElementById('bsFailed').textContent     = failed;
+            document.getElementById('bsScored').textContent     = scored;
+            document.getElementById('bsAvg').textContent        = (avg != null) ? `%${Number(avg).toFixed(1)}` : '—';
+
+            // Auto-key tespit edilen TG'ler
+            const keys = finalStatus.auto_keys_by_tg || {};
+            const tgs = Object.keys(keys);
+            const wrap = document.getElementById('bsAutoKeysWrap');
+            const list = document.getElementById('bsAutoKeys');
+            if (tgs.length > 0) {
+                list.innerHTML = tgs.map(tg => {
+                    const qc = Object.keys(keys[tg] || {}).length;
+                    return `<span style="background:var(--pico-card-sectioning-background-color, rgba(0,0,0,0.05)); padding:0.25rem 0.6rem; border-radius:14px; border:1px solid var(--pico-muted-border-color);">
+                        <strong>${tg}</strong> · ${qc} soru
+                    </span>`;
+                }).join('');
+                wrap.style.display = '';
+            } else {
+                wrap.style.display = 'none';
+            }
+
+            // Hata mesajı (failed status)
+            const errEl = document.getElementById('bsError');
+            if (finalStatus.status === 'failed' && finalStatus.error_message) {
+                errEl.textContent = finalStatus.error_message;
+                errEl.style.display = 'block';
+            } else {
+                errEl.style.display = 'none';
+            }
+
+            // "Sonuçları görüntüle" — sonuçlar sekmesine geç ve bu batch'i aç
+            const goBtn = document.getElementById('goToResultsBtn');
+            lastBatchId = finalStatus.id || null;
+            goBtn.onclick = () => navigateToResults(lastBatchId);
+
+            card.style.display = 'block';
+        }
+
+        // Sonuçlar sekmesine geç + (varsa) ilgili batch klasörünü açık göster
+        function navigateToResults(highlightBatchId) {
+            const tabLink = document.querySelector('.sidebar .menu a[data-target="results"]');
+            if (tabLink) tabLink.click();
+            if (highlightBatchId) {
+                // Bir sonraki render'da açılacak batch id'sini ayarla
+                window._highlightBatchId = highlightBatchId;
+            }
+            // Mobile sidebar açıksa kapat
+            if (typeof window.closeMobileSidebar === 'function') window.closeMobileSidebar();
+        }
+
+        // ── Helper: '#' ambiguity karakterlerini görsel olarak vurgula (tooltip i18n)
+        function formatAmbig(value) {
+            if (value == null) return '-';
+            const tooltip = t('ambig_title');
+            return String(value).replace(/#/g,
+                `<span class="ambig-marker" title="${tooltip}">#</span>`);
+        }
+        window.formatAmbig = formatAmbig;
+
+        // --- Bölüm 5: Sonuçlar — batch klasörleri ile grupla ---
+        let resultsData = [];          // tüm sonuçların düz listesi
+        let examsById = {};            // exam_id → exam (sınav adı için)
+        let currentResultSearch = '';
+        // Tablo sıralama state'i — header'a tıklayınca toggle
+        let sortKey = 'date_desc';     // ad / no / group / correct / wrong / percent / date / exam — _asc | _desc
+        // Sıralama yardımcısı
+        function _sortItems(items) {
+            const [key, dir] = (sortKey.endsWith('_desc') || sortKey.endsWith('_asc'))
+                ? [sortKey.replace(/_(asc|desc)$/, ''), sortKey.endsWith('_desc') ? -1 : 1]
+                : [sortKey, 1];
+            const cmp = (a, b) => {
+                let va, vb;
+                switch (key) {
+                    case 'name':    va = (a.full_name || '').toLowerCase();        vb = (b.full_name || '').toLowerCase(); break;
+                    case 'no':      va = String(a.student_number || '');            vb = String(b.student_number || ''); break;
+                    case 'group':   va = (a.test_group || '');                      vb = (b.test_group || ''); break;
+                    case 'correct': va = a.scoring?.correct ?? -1;                  vb = b.scoring?.correct ?? -1; break;
+                    case 'wrong':   va = a.scoring?.wrong ?? -1;                    vb = b.scoring?.wrong ?? -1; break;
+                    case 'percent': va = a.scoring?.percentage ?? -1;               vb = b.scoring?.percentage ?? -1; break;
+                    case 'exam':    va = examsById[a.exam_id]?.name || '';          vb = examsById[b.exam_id]?.name || ''; break;
+                    case 'date':
+                    default:        va = a.created_at ? new Date(a.created_at).getTime() : 0;
+                                    vb = b.created_at ? new Date(b.created_at).getTime() : 0; break;
+                }
+                if (va < vb) return -1 * dir;
+                if (va > vb) return  1 * dir;
+                return 0;
+            };
+            return [...items].sort(cmp);
+        }
+        // Header'a tıklanınca aynı kolonu desc/asc toggle, farklı kolona asc
+        window.toggleSort = function(key) {
+            if (sortKey === `${key}_asc`)      sortKey = `${key}_desc`;
+            else if (sortKey === `${key}_desc`) sortKey = `${key}_asc`;
+            else                                sortKey = `${key}_asc`;
+            renderBatchFolders();
+        };
+        function _sortIndicator(key) {
+            if (sortKey === `${key}_asc`)  return ' <i class="ph ph-caret-up" style="font-size:0.7em;"></i>';
+            if (sortKey === `${key}_desc`) return ' <i class="ph ph-caret-down" style="font-size:0.7em;"></i>';
+            return '';
+        }
+
+        async function loadResults() {
+            const container = document.getElementById('batchFoldersContainer');
+            container.innerHTML = `<p style="text-align:center; color:var(--pico-muted-color); padding:2rem 0;">${t('loading')}</p>`;
+            try {
+                const [results, exams] = await Promise.all([
+                    apiFetch('/api/results', {}, './mock-api/results.json'),
+                    apiFetch('/api/exams', {}, './mock-api/exams.json').catch(() => []),
+                ]);
+                resultsData = results || [];
+                examsById = {};
+                (exams || []).forEach(ex => { examsById[ex.id] = ex; });
+                renderBatchFolders();
+            } catch (e) {
+                container.innerHTML = `<p class="empty-state" style="text-align:center; padding:2rem 0;"><i class="ph ph-warning-circle"></i> ${t('msg_results_fail')}</p>`;
+            }
+        }
+
+        // Sonuçları batch_id (klasör) altında grupla; null batch_id ise tek-tek tarama
+        function _groupByBatch(rows) {
+            const groups = {};
+            rows.forEach(r => {
+                const key = r.batch_id != null ? String(r.batch_id) : `_solo_${r.id}`;
+                if (!groups[key]) {
+                    groups[key] = {
+                        batch_id: r.batch_id,
+                        created_at: r.created_at,    // klasör tarihi (ilk kaydın tarihi)
+                        exam_id: r.exam_id,          // batch'teki ilk kaydın exam_id'si
+                        items: [],
+                    };
+                }
+                groups[key].items.push(r);
+                // Klasör tarihi en yeni kayıttan; ama biz ilk-gelene göre belirledik. Daha doğrusu:
+                if (new Date(r.created_at) > new Date(groups[key].created_at)) {
+                    groups[key].created_at = r.created_at;
+                }
+            });
+            return Object.values(groups).sort(
+                (a, b) => new Date(b.created_at) - new Date(a.created_at)
+            );
+        }
+
+        function _matchesFilter(r) {
+            if (currentResultSearch) {
+                const q = currentResultSearch.toLowerCase();
+                const fn = (r.full_name || '').toLowerCase();
+                const sn = String(r.student_number || '').toLowerCase();
+                if (!fn.includes(q) && !sn.includes(q)) return false;
+            }
+            const dateFrom = document.getElementById('filterDateFrom').value;
+            const dateTo = document.getElementById('filterDateTo').value;
+            if (dateFrom && new Date(r.created_at) < new Date(dateFrom)) return false;
+            if (dateTo) {
+                const td = new Date(dateTo); td.setHours(23, 59, 59, 999);
+                if (new Date(r.created_at) > td) return false;
+            }
+            const cls = document.getElementById('filterClass').value;
+            if (cls && r.test_group !== cls) return false;
+            return true;
+        }
+
+        // Bir batch'in items'ını kaynak PDF/dosyaya göre alt-grupla.
+        //
+        // Backend `image_filename` formatları (ile rasterize edilen):
+        //   - "input.pdf sayfa 3"      → PDF sayfa
+        //   - "scan.jpg"                → tek görsel
+        //
+        // PDF için pdf-adını çıkar, sub-folder yap. Tek görseller "flat".
+        function _groupBySource(items) {
+            const groups = {};
+            const ungrouped = [];
+            items.forEach(r => {
+                const src = r.image_filename || '';
+                // PDF pattern: "<isim>.pdf sayfa N" veya sonu .pdf ile bitiyor
+                const pdfMatch = src.match(/^(.+\.pdf)(?:\s+sayfa\s+\d+)?$/i);
+                if (pdfMatch) {
+                    const pdfName = pdfMatch[1];
+                    (groups[pdfName] = groups[pdfName] || []).push(r);
+                } else {
+                    ungrouped.push(r);
+                }
+            });
+            const result = [];
+            // Default sıralamada (date_desc) PDF için sayfa-no sırala; aksi durumda caller'ın seçtiği sıralamaya saygı göster.
+            const useDefaultPageSort = sortKey === 'date_desc' || sortKey === 'date_asc';
+            // PDF sub-folder'ları (alfabetik)
+            Object.keys(groups).sort().forEach(name => {
+                if (useDefaultPageSort) {
+                    groups[name].sort((a, b) => {
+                        const pa = parseInt((a.image_filename || '').match(/sayfa\s+(\d+)/i)?.[1] || '0', 10);
+                        const pb = parseInt((b.image_filename || '').match(/sayfa\s+(\d+)/i)?.[1] || '0', 10);
+                        return pa - pb;
+                    });
+                }
+                // Aksi takdirde items zaten _sortItems'la sıralanmış olarak gelir
+                result.push({ type: 'pdf', name, items: groups[name] });
+            });
+            // Tek görseller (varsa) — sub-folder olmadan direkt liste
+            if (ungrouped.length > 0) {
+                result.push({ type: 'flat', items: ungrouped });
+            }
+            return result;
+        }
+
+        // Tek bir satır oluştur (alt-klasör veya batch düz görünüm için ortak)
+        function _renderResultRow(res, batchId, subKey) {
+            const sc = res.scoring || {};
+            const correct = sc.correct ?? '-';
+            const wrong   = sc.wrong   ?? '-';
+            const pct     = sc.percentage != null ? '%' + Number(sc.percentage).toFixed(2) : '-';
+            const fullName = formatAmbig(res.full_name);
+            const studentNo = formatAmbig(res.student_number);
+            const rDate = res.created_at ? new Date(res.created_at).toLocaleString() : '-';
+            const rExam = res.exam_id != null && examsById[res.exam_id]
+                ? examsById[res.exam_id].name
+                : `<span class="badge-exam-empty">${t('scan_no_exam_label')}</span>`;
+            const rMethod = res.exam_id != null
+                ? `<span class="badge-method">${t('scan_method_exam')}</span>`
+                : `<span class="badge-method quick">${t('scan_method_quick')}</span>`;
+            const markedBtn = res.marked_image_available
+                ? `<button class="outline" style="padding:0.25rem 0.5rem; width:auto; margin:0 0.25rem 0 0;" title="${t('scan_view_marked')}" onclick="showMarkedImage(${res.id}, '${(res.output_label || res.student_number || '').replace(/'/g, "\\'")}')"><i class="ph ph-image"></i></button>`
+                : '';
+            const batchAttr = batchId != null ? ` data-batch="${batchId}"` : '';
+            const subAttr   = subKey != null ? ` data-sub="${subKey.replace(/"/g, '&quot;')}"` : '';
+            const dispBadge = (res.dispute_count || 0) > 0
+                ? ` <span class="badge-method" style="background:#fed7aa; color:#9a3412; font-size:0.7rem;" title="${t('dispute_badge_title')}"><i class="ph ph-megaphone"></i> ${res.dispute_count}</span>`
+                : '';
+            return `
+                <tr${batchAttr}${subAttr}>
+                    <td class="select-col" style="width:32px;"><input type="checkbox" class="row-select-cb" data-id="${res.id}" style="margin:0;"></td>
+                    <td>${fullName}${dispBadge}</td>
+                    <td>${studentNo}</td>
+                    <td class="results-hide-mobile">${res.test_group ?? '-'}</td>
+                    <td class="results-hide-mobile">${correct}</td>
+                    <td class="results-hide-mobile">${wrong}</td>
+                    <td>${pct}</td>
+                    <td class="results-hide-mobile">${rDate}</td>
+                    <td>${rExam} ${rMethod}</td>
+                    <td style="white-space:nowrap;">
+                        ${markedBtn}
+                        <button class="outline secondary" style="padding:0.25rem 0.5rem; width:auto; margin:0 0.25rem 0 0;" title="${t('btn_detail')}" onclick="showResultDetail(${res.id})"><i class="ph ph-info"></i></button>
+                        <button class="outline" style="padding:0.25rem 0.5rem; width:auto; margin:0 0.25rem 0 0;" title="${t('assign_to_exam')}" onclick="openAssignDialog('result', ${res.id})"><i class="ph ph-link"></i></button>
+                        <button class="btn-danger" style="padding:0.25rem 0.5rem; width:auto; margin:0;" title="${t('btn_delete')}" onclick="deleteResultRow(${res.id})"><i class="ph ph-trash"></i></button>
+                    </td>
+                </tr>`;
+        }
+
+        // Sıralanabilir header — tıkla → toggleSort('key')
+        function _renderTableHead() {
+            const SH = (key, label, cls = '') =>
+                `<th class="${cls} sortable-th" onclick="toggleSort('${key}')" style="cursor:pointer; user-select:none;">${label}${_sortIndicator(key)}</th>`;
+            return `
+                <thead>
+                    <tr>
+                        <th class="select-col" style="width:32px;"></th>
+                        ${SH('name',    t('th_name'))}
+                        ${SH('no',      t('th_student_no'))}
+                        ${SH('group',   t('th_group'),   'results-hide-mobile')}
+                        ${SH('correct', t('th_correct'), 'results-hide-mobile')}
+                        ${SH('wrong',   t('th_wrong'),   'results-hide-mobile')}
+                        ${SH('percent', t('th_percent'))}
+                        ${SH('date',    t('th_date'),    'results-hide-mobile')}
+                        ${SH('exam',    t('col_exam') + '/' + t('col_method'))}
+                        <th>${t('col_actions')}</th>
+                    </tr>
+                </thead>`;
+        }
+
+        function renderBatchFolders() {
+            const container = document.getElementById('batchFoldersContainer');
+            // Render öncesi: hangi klasör/sub-folder/checkbox açık/seçili — state'i kaydet
+            const openBatches = new Set();
+            const openSubs = new Set();
+            const checkedRows = new Set();
+            container.querySelectorAll('.batch-folder.open').forEach(el => {
+                const b = el.dataset.batchId;
+                if (b !== '') openBatches.add(b);
+            });
+            container.querySelectorAll('.sub-folder[data-open="true"]').forEach(el => {
+                const k = el.dataset.subKey;
+                if (k) openSubs.add(k);
+            });
+            container.querySelectorAll('.row-select-cb:checked').forEach(cb => {
+                checkedRows.add(cb.dataset.id);
+            });
+
+            const filtered = (resultsData || []).filter(_matchesFilter);
+            if (filtered.length === 0) {
+                container.innerHTML = `<p class="empty-state" style="text-align:center; padding:2rem 0;"><i class="ph ph-folder-simple"></i> ${t('no_results_yet')}</p>`;
+                _refreshBulkToolbarState();
+                return;
+            }
+            const groups = _groupByBatch(filtered);
+            // Sınav atama dialog'u için sınav listesi
+            const examOptions = Object.values(examsById)
+                .map(e => `<option value="${e.id}">${e.name || ('Sınav #' + e.id)}</option>`)
+                .join('');
+
+            container.innerHTML = groups.map(g => {
+                const dt = new Date(g.created_at);
+                const dtLabel = dt.toLocaleString();
+                const batchId = g.batch_id;
+                const batchLabel = batchId != null
+                    ? `${t('batch_folder_label')} #${batchId}`
+                    : `${t('batch_folder_label')}`;
+                const examLabel = g.exam_id != null && examsById[g.exam_id]
+                    ? examsById[g.exam_id].name
+                    : `<span class="badge-exam-empty">${t('scan_no_exam_label')}</span>`;
+                const methodBadge = g.exam_id != null
+                    ? `<span class="badge-method">${t('scan_method_exam')}</span>`
+                    : `<span class="badge-method quick">${t('scan_method_quick')}</span>`;
+                const isOpen = window._highlightBatchId != null && String(batchId) === String(window._highlightBatchId);
+
+                // Sırala — her batch'in item'larını sortKey'e göre sırala
+                const sortedItems = _sortItems(g.items);
+                // Kaynak PDF'lere göre alt-grup
+                const sub = _groupBySource(sortedItems);
+                const subHasPdf = sub.some(s => s.type === 'pdf');
+
+                let bodyHtml = '';
+                if (subHasPdf) {
+                    // PDF başına alt-klasör — her PDF için kendi accordion'u + checkbox
+                    bodyHtml = sub.map((s, idx) => {
+                        if (s.type === 'pdf') {
+                            const subKey = s.name;
+                            const rowsHtml = s.items.map(r => _renderResultRow(r, batchId, subKey)).join('');
+                            return `
+                                <div class="sub-folder" data-open="true" data-sub-key="${subKey.replace(/"/g, '&quot;')}">
+                                    <div class="sub-folder-header">
+                                        <input type="checkbox" class="sub-select-cb" data-batch="${batchId}" data-sub="${subKey.replace(/"/g, '&quot;')}" onclick="event.stopPropagation();" style="margin:0 0.35rem 0 0;">
+                                        <i class="ph ph-caret-right caret" onclick="event.stopPropagation(); this.parentElement.parentElement.dataset.open = this.parentElement.parentElement.dataset.open === 'true' ? 'false' : 'true'"></i>
+                                        <i class="ph ph-file-pdf" onclick="event.stopPropagation(); this.parentElement.parentElement.dataset.open = this.parentElement.parentElement.dataset.open === 'true' ? 'false' : 'true'"></i>
+                                        <span class="sub-folder-title" onclick="event.stopPropagation(); this.parentElement.parentElement.dataset.open = this.parentElement.parentElement.dataset.open === 'true' ? 'false' : 'true'">${s.name}</span>
+                                        <span class="sub-folder-meta">${s.items.length} ${t('batch_folder_items')}</span>
+                                    </div>
+                                    <div class="sub-folder-body">
+                                        <table role="grid">${_renderTableHead()}<tbody>${rowsHtml}</tbody></table>
+                                    </div>
+                                </div>`;
+                        } else {
+                            // Tek görseller — ayrı PDF olmayan dosyalar
+                            const rowsHtml = s.items.map(r => _renderResultRow(r, batchId, null)).join('');
+                            return `<table role="grid" style="margin-top:0.5rem;">${_renderTableHead()}<tbody>${rowsHtml}</tbody></table>`;
+                        }
+                    }).join('');
+                } else {
+                    // Hiç PDF yoksa düz tablo
+                    const rowsHtml = sortedItems.map(r => _renderResultRow(r, batchId, null)).join('');
+                    bodyHtml = `<table role="grid">${_renderTableHead()}<tbody>${rowsHtml}</tbody></table>`;
+                }
+
+                return `
+                    <div class="batch-folder ${isOpen ? 'open' : ''}" data-batch-id="${batchId ?? ''}">
+                        <div class="batch-folder-header">
+                            <input type="checkbox" class="batch-select-cb" data-batch="${batchId ?? ''}" onclick="event.stopPropagation();" style="margin:0 0.35rem 0 0;">
+                            <i class="ph ph-caret-right caret" onclick="this.parentElement.parentElement.classList.toggle('open')"></i>
+                            <i class="ph ph-folder-simple" onclick="this.parentElement.parentElement.classList.toggle('open')"></i>
+                            <div class="batch-folder-title" onclick="this.parentElement.parentElement.classList.toggle('open')" style="cursor:pointer;">${batchLabel} · ${dtLabel}</div>
+                            <div class="batch-folder-meta" onclick="this.parentElement.parentElement.classList.toggle('open')" style="cursor:pointer;">
+                                <span>${g.items.length} ${t('batch_folder_items')}</span>
+                                <span>·</span>
+                                <span>${examLabel}</span>
+                                ${methodBadge}
+                            </div>
+                            ${batchId != null ? `
+                                ${g.exam_id == null ? `
+                                    <button class="outline" style="padding:0.2rem 0.5rem; width:auto; margin:0; font-size:0.75rem;" onclick="event.stopPropagation(); openCreateExamFromBatch(${batchId})" title="${t('create_exam_from_batch')}">
+                                        <i class="ph ph-plus-circle"></i> ${t('create_exam_from_batch_short')}
+                                    </button>
+                                ` : ''}
+                                <button class="outline secondary" style="padding:0.2rem 0.5rem; width:auto; margin:0; font-size:0.75rem;" onclick="event.stopPropagation(); openAssignDialog('batch', ${batchId})">
+                                    <i class="ph ph-link"></i> ${t('assign_to_exam_bulk')}
+                                </button>
+                                <button class="btn-danger" style="padding:0.2rem 0.5rem; width:auto; margin:0; font-size:0.75rem;" onclick="event.stopPropagation(); deleteBatchFolder(${batchId})" title="${t('delete_folder_btn')}">
+                                    <i class="ph ph-trash"></i> ${t('delete_folder_btn')}
+                                </button>
+                            ` : ''}
+                        </div>
+                        <div class="batch-folder-body">${bodyHtml}</div>
+                    </div>`;
+            }).join('');
+
+            window._highlightBatchId = null;
+
+            // Atama dialog'unu güncel sınav listesiyle hazır tut
+            const assignSelect = document.getElementById('assignExamSelect');
+            if (assignSelect) {
+                assignSelect.innerHTML =
+                    `<option value="">— ${t('select_exam_for_assign')} —</option>` + examOptions;
+            }
+
+            // ─── State restore: render öncesi açık olan klasörleri ve seçimleri geri yükle
+            // 1) Önceki açık batch klasörlerini tekrar aç
+            container.querySelectorAll('.batch-folder').forEach(el => {
+                const b = el.dataset.batchId;
+                if (b !== '' && openBatches.has(b)) el.classList.add('open');
+            });
+            // 2) Önceki açık sub-folder (PDF) klasörlerini tekrar aç
+            container.querySelectorAll('.sub-folder').forEach(el => {
+                const k = el.dataset.subKey;
+                if (k && openSubs.has(k)) el.setAttribute('data-open', 'true');
+            });
+            // 3) Önceden seçili olan row checkbox'larını geri seç
+            container.querySelectorAll('.row-select-cb').forEach(cb => {
+                if (checkedRows.has(cb.dataset.id)) cb.checked = true;
+            });
+
+            // Checkbox event'lerini bağla
+            container.querySelectorAll('.row-select-cb').forEach(cb => {
+                cb.addEventListener('change', () => {
+                    _refreshGroupCheckboxes();
+                    _refreshBulkToolbarState();
+                });
+            });
+            // Sub-folder (PDF) checkbox: altındaki tüm row'ları seç/kaldır
+            container.querySelectorAll('.sub-select-cb').forEach(cb => {
+                cb.addEventListener('change', () => {
+                    const batch = cb.dataset.batch;
+                    const sub = cb.dataset.sub;
+                    container.querySelectorAll(`tr[data-batch="${batch}"][data-sub="${sub.replace(/"/g, '&quot;')}"] .row-select-cb`).forEach(r => {
+                        r.checked = cb.checked;
+                    });
+                    _refreshGroupCheckboxes();
+                    _refreshBulkToolbarState();
+                });
+            });
+            // Batch checkbox: altındaki tüm row'ları seç/kaldır
+            container.querySelectorAll('.batch-select-cb').forEach(cb => {
+                cb.addEventListener('change', () => {
+                    const batch = cb.dataset.batch;
+                    container.querySelectorAll(`tr[data-batch="${batch}"] .row-select-cb`).forEach(r => {
+                        r.checked = cb.checked;
+                    });
+                    // Sub-folder checkbox'larını da senkronize et
+                    container.querySelectorAll(`.sub-select-cb[data-batch="${batch}"]`).forEach(s => {
+                        s.checked = cb.checked;
+                        s.indeterminate = false;
+                    });
+                    _refreshBulkToolbarState();
+                });
+            });
+            _refreshGroupCheckboxes();
+            _refreshBulkToolbarState();
+        }
+
+        // Row durumuna göre batch + sub checkbox'larının check/indeterminate state'ini güncelle
+        function _refreshGroupCheckboxes() {
+            const container = document.getElementById('batchFoldersContainer');
+            if (!container) return;
+            // Her sub-folder için: altındaki row'lar tamamen seçili mi?
+            container.querySelectorAll('.sub-select-cb').forEach(scb => {
+                const batch = scb.dataset.batch;
+                const sub = scb.dataset.sub;
+                const rows = container.querySelectorAll(`tr[data-batch="${batch}"][data-sub="${sub.replace(/"/g, '&quot;')}"] .row-select-cb`);
+                const total = rows.length;
+                const checked = Array.from(rows).filter(r => r.checked).length;
+                scb.checked = total > 0 && checked === total;
+                scb.indeterminate = checked > 0 && checked < total;
+            });
+            // Her batch için: altındaki tüm row'lar tamamen seçili mi?
+            container.querySelectorAll('.batch-select-cb').forEach(bcb => {
+                const batch = bcb.dataset.batch;
+                const rows = container.querySelectorAll(`tr[data-batch="${batch}"] .row-select-cb`);
+                const total = rows.length;
+                const checked = Array.from(rows).filter(r => r.checked).length;
+                bcb.checked = total > 0 && checked === total;
+                bcb.indeterminate = checked > 0 && checked < total;
+            });
+        }
+
+        // Eski tablo renderı çağrılırsa yeni fonksiyona yönlendir
+        function renderResultsTable() { renderBatchFolders(); }
+
+        // Filtre Eventleri (artık batch klasörlerini günceller)
+        document.getElementById('resultSearchInput').addEventListener('input', (e) => {
+            currentResultSearch = e.target.value;
+            renderBatchFolders();
+        });
+        document.getElementById('filterDateFrom').addEventListener('change', renderBatchFolders);
+        document.getElementById('filterDateTo').addEventListener('change', renderBatchFolders);
+        document.getElementById('filterClass').addEventListener('change', renderBatchFolders);
+
+        // showResultDetail — backend'ten /api/results/{id} ile tam detayı çeker
+        // (answers, answer_key dahil); cevap anahtarı yoksa bile öğrencinin
+        // işaretlerini her zaman gösterir.
+        window.showResultDetail = async function(resultId) {
+            const modalContent = document.getElementById('detailModalContent');
+            modalContent.innerHTML = `<p style="text-align:center; padding:1rem; color:var(--pico-muted-color);">${t('loading')}</p>`;
+            document.getElementById('detailModal').setAttribute('open', 'true');
+
+            let res;
+            try {
+                res = await apiFetch(`/api/results/${resultId}`, {}, './mock-api/results.json');
+                if (Array.isArray(res)) {
+                    res = res.find(r => String(r.id) === String(resultId));
+                    if (!res) throw new Error("Kayıt bulunamadı");
+                }
+            } catch (err) {
+                modalContent.innerHTML = `<p style="color:var(--pico-del-color);">${err.message || err}</p>`;
+                return;
+            }
+            if (!res) {
+                modalContent.innerHTML = `<p>${t('msg_results_fail')}</p>`;
+                return;
+            }
+            const date = res.created_at ? new Date(res.created_at).toLocaleString() : '-';
+            const sc = res.scoring || null;
+            const correct = sc?.correct ?? 0;
+            const wrong   = sc?.wrong   ?? 0;
+            const blank   = sc?.blank   ?? 0;
+            const pct     = sc?.percentage != null ? Number(sc.percentage).toFixed(2) : '-';
+            const total = correct + wrong + blank;
+            const correctWidth = total > 0 ? (correct / total * 100).toFixed(2) : 0;
+            const wrongWidth   = total > 0 ? (wrong   / total * 100).toFixed(2) : 0;
+            const blankWidth   = total > 0 ? (blank   / total * 100).toFixed(2) : 0;
+
+            const examName = res.exam_id && examsById[res.exam_id]
+                ? examsById[res.exam_id].name
+                : t('scan_no_exam_label');
+            const hasScoring = sc != null;
+            const hasAnswerKey = res.answer_key && Object.keys(res.answer_key).length > 0;
+            const srcPdf = res.image_filename ? `<p><strong>${t('source_pdf_label')}:</strong> ${res.image_filename}</p>` : '';
+
+            let html = `
+                <div class="grid">
+                    <div>
+                        <p><strong>${t('th_name')}:</strong> ${formatAmbig(res.full_name || '-')}</p>
+                        <p><strong>${t('th_student_no')}:</strong> ${formatAmbig(res.student_number || '-')}</p>
+                        <p><strong>${t('th_group')}:</strong> ${res.test_group ?? '-'}</p>
+                        <p><strong>${t('th_date')}:</strong> ${date}</p>
+                        <p><strong>${t('col_exam')}:</strong> ${examName}</p>
+                        ${srcPdf}
+                    </div>
+                    <div>
+                        ${hasScoring ? `
+                            <p><strong>${t('th_correct')}:</strong> <span style="color:var(--pico-ins-color); font-weight:bold;">${correct}</span></p>
+                            <p><strong>${t('th_wrong')}:</strong> <span style="color:var(--pico-del-color); font-weight:bold;">${wrong}</span></p>
+                            <p><strong>${t('res_blank')}:</strong> <span style="font-weight:bold;">${blank}</span></p>
+                            <h3 style="margin-top:0.5rem; color:var(--pico-primary);">${t('res_score')}: %${pct}</h3>
+                        ` : `
+                            <p style="color:var(--pico-muted-color);">${t('no_key_no_score')}</p>
+                        `}
+                    </div>
+                </div>
+            `;
+
+            if (hasScoring) {
+                html += `
+                    <h5 style="margin-top: 1rem; margin-bottom: 0.5rem;">Sınav İstatistiği</h5>
+                    <div class="stat-bar-container">
+                        <div class="stat-bar-correct" style="width: ${correctWidth}%;" title="${t('th_correct')}: %${correctWidth}">${correctWidth > 5 ? correct : ''}</div>
+                        <div class="stat-bar-wrong" style="width: ${wrongWidth}%;" title="${t('th_wrong')}: %${wrongWidth}">${wrongWidth > 5 ? wrong : ''}</div>
+                        <div class="stat-bar-blank" style="width: ${blankWidth}%;" title="${t('res_blank')}: %${blankWidth}">${blankWidth > 5 ? blank : ''}</div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--pico-muted-color);">
+                        <span><i class="ph-fill ph-circle" style="color:#22c55e;"></i> ${t('th_correct')}</span>
+                        <span><i class="ph-fill ph-circle" style="color:#ef4444;"></i> ${t('th_wrong')}</span>
+                        <span><i class="ph-fill ph-circle" style="color:#94a3b8;"></i> ${t('res_blank')}</span>
+                    </div>
+                `;
+            }
+
+            html += `
+                <hr>
+                <p style="margin-bottom: 0.5rem;"><strong>${hasAnswerKey ? t('res_map') : t('marked_answers_title')}:</strong></p>
+                <div class="answer-grid">
+            `;
+
+            if (res.answers && Object.keys(res.answers).length > 0) {
+                // Soru numarası sıralı göster
+                const entries = Object.entries(res.answers)
+                    .sort((a, b) => Number(a[0]) - Number(b[0]));
+                for (const [qNum, ans] of entries) {
+                    const studentAns = (ans ?? '-') + '';
+                    const correctAns = hasAnswerKey ? (res.answer_key[qNum] || res.answer_key[String(qNum)] || '') : '';
+                    let bgColor = '', label;
+                    if (hasAnswerKey && correctAns) {
+                        if (studentAns === '-' || studentAns === '') {
+                            // Boş
+                            bgColor = 'background:rgba(148,163,184,0.18);';
+                            label = `<span style="color:var(--pico-muted-color);">${studentAns || '-'}</span> <small style="color:var(--pico-muted-color);">→${correctAns}</small>`;
+                        } else if (studentAns === '#') {
+                            bgColor = 'background:rgba(220,38,38,0.18);';
+                            label = `<span style="color:var(--pico-del-color);">#</span>`;
+                        } else if (studentAns === correctAns) {
+                            bgColor = 'background:rgba(22,163,74,0.18);';
+                            label = `<span style="color:var(--pico-ins-color);">${studentAns}</span>`;
+                        } else {
+                            bgColor = 'background:rgba(220,38,38,0.18);';
+                            label = `<span style="color:var(--pico-del-color);">${studentAns}</span> <small style="color:var(--pico-muted-color);">→${correctAns}</small>`;
+                        }
+                    } else {
+                        // Cevap anahtarı yok — sadece işaretliyi göster
+                        label = `<span style="color:var(--pico-primary);">${formatAmbig(studentAns)}</span>`;
+                    }
+                    html += `<div class="answer-box" style="${bgColor}"><span>${qNum}</span>${label}</div>`;
+                }
+            } else {
+                html += '<p style="grid-column: 1 / -1; width: 100%;">Cevap detayı bulunamadı.</p>';
+            }
+
+            html += '</div>';
+
+            // Marked image kısayolu (varsa)
+            if (res.marked_image_available) {
+                html += `
+                    <hr>
+                    <div style="text-align:center;">
+                        <button class="outline" style="width:auto; margin:0;" onclick="showMarkedImage(${res.id}, '${(res.output_label || res.student_number || '').replace(/'/g, "\\'")}')">
+                            <i class="ph ph-image"></i> ${t('scan_view_marked')}
+                        </button>
+                    </div>
+                `;
+            }
+
+            // İtirazlar bölümü (öğretmen için yanıtlama formu var)
+            html += `<hr><div id="teacherDisputesBlock"><p style="text-align:center; color:var(--pico-muted-color);">${t('loading')}</p></div>`;
+
+            document.getElementById('detailModalContent').innerHTML = html;
+
+            // İtirazları async yükle
+            try {
+                let list = await apiFetch(`/api/results/${res.id}/disputes`, {}, './mock-api/disputes.json');
+                if (Array.isArray(list)) list = list.filter(d => String(d.result_id) === String(res.id));
+                const block = document.getElementById('teacherDisputesBlock');
+                let dh = `<h6 style="margin-bottom:0.5rem;"><i class="ph ph-megaphone"></i> ${t('disputes_for_result')} (${list.length})</h6>`;
+                if (list.length === 0) {
+                    dh += `<p style="color:var(--pico-muted-color); font-size:0.9rem;">${t('disputes_none')}</p>`;
+                } else {
+                    list.forEach(d => {
+                        const stCls = d.status === 'open' ? 'badge-pending' : 'badge-done';
+                        const stLbl = d.status === 'open' ? t('disp_status_open')
+                                    : d.status === 'answered' ? t('disp_status_answered') : t('disp_status_closed');
+                        dh += `
+                            <div style="padding:0.6rem; border:1px solid var(--pico-muted-border-color); border-radius:8px; margin-bottom:0.5rem;">
+                                <div style="display:flex; justify-content:space-between; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.25rem;">
+                                    <strong>${d.student_name || d.student_email || '-'}</strong>
+                                    <span class="badge-status ${stCls}">${stLbl}</span>
+                                </div>
+                                <small style="color:var(--pico-muted-color); display:block; margin-bottom:0.3rem;">${d.created_at ? new Date(d.created_at).toLocaleString() : ''}</small>
+                                <p style="margin:0.2rem 0; font-size:0.9rem;">${d.message}</p>
+                                ${d.response ? `<div style="margin-top:0.4rem; padding:0.4rem 0.6rem; background:rgba(46,158,110,0.08); border-left:3px solid var(--pico-primary); border-radius:4px; font-size:0.85rem;"><strong>${t('disp_response')}:</strong> ${d.response}<br><small style="color:var(--pico-muted-color);">${d.responder_name || '-'} · ${d.responded_at ? new Date(d.responded_at).toLocaleString() : ''}</small></div>`
+                                    : `<button class="outline" style="width:auto; margin:0.4rem 0 0; padding:0.2rem 0.6rem; font-size:0.8rem;" onclick="openRespondDispute(${d.id})"><i class="ph ph-chat-circle-text"></i> ${t('disp_respond')}</button>`}
+                            </div>
+                        `;
+                    });
+                }
+                block.innerHTML = dh;
+            } catch (err) {
+                document.getElementById('teacherDisputesBlock').innerHTML = `<p style="color:var(--pico-del-color);">${err.message || err}</p>`;
+            }
+        };
+
+        // Öğretmen yanıtla
+        window.openRespondDispute = function(disputeId) {
+            const response = prompt(t('disp_respond_prompt'));
+            if (!response || !response.trim()) return;
+            apiFetch(`/api/disputes/${disputeId}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ response: response.trim(), status: 'answered' }),
+            }).then(() => {
+                showToast(t('disp_respond_ok'), 'success');
+                // Modal'ı kapat — kullanıcı tekrar açabilir
+                document.getElementById('detailModal').removeAttribute('open');
+            }).catch(err => {
+                showToast((err.message || err), 'error');
+            });
+        };
+
+        document.getElementById('closeModalBtn').addEventListener('click', () => {
+            document.getElementById('detailModal').removeAttribute('open');
+        });
+
+        // ── Sınava Aktar dialog'u: tek sonuç veya batch için ortak
+        let _assignTarget = null; // {scope: 'result' | 'batch', id: number}
+        // ─── Hızlı tarama klasöründen Sınav Oluştur ───
+        window.openCreateExamFromBatch = async function(batchId) {
+            // Batch bilgisi: auto-key var mı?
+            let batchInfo = null;
+            try { batchInfo = await apiFetch(`/api/scan/batch/${batchId}`); } catch {}
+            const hasAutoKey = batchInfo?.auto_keys_by_tg && Object.keys(batchInfo.auto_keys_by_tg).length > 0;
+
+            document.getElementById('cefbBatchId').value = batchId;
+            const dt = batchInfo?.created_at ? new Date(batchInfo.created_at).toLocaleDateString() : '';
+            document.getElementById('cefbExamName').value = `Sınav (${dt})`;
+            // Sınıf listesi
+            const sel = document.getElementById('cefbClassSelect');
+            sel.innerHTML = `<option value="">${t('select_class')}</option>`;
+            (_classesData || []).forEach(c => {
+                sel.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+            });
+            // Auto-key toggle
+            const autoKeyCb = document.getElementById('cefbAutoKey');
+            autoKeyCb.checked = !!hasAutoKey;
+            autoKeyCb.disabled = !hasAutoKey;
+            document.getElementById('createExamFromBatchModal').setAttribute('open', 'true');
+        };
+
+        document.getElementById('createExamFromBatchForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const batchId = parseInt(document.getElementById('cefbBatchId').value, 10);
+            const name = document.getElementById('cefbExamName').value.trim();
+            const classId = parseInt(document.getElementById('cefbClassSelect').value, 10);
+            const useAutoKey = document.getElementById('cefbAutoKey').checked;
+            if (!name || !classId) return;
+
+            try {
+                // 1) Batch'in auto_keys'lerini al + ilk TG'nin anahtarını answer_key olarak kullan
+                let answer_key = null;
+                let q_count = 200;
+                if (useAutoKey) {
+                    const bi = await apiFetch(`/api/scan/batch/${batchId}`);
+                    const ak = bi?.auto_keys_by_tg || {};
+                    const tgs = Object.keys(ak);
+                    if (tgs.length > 0) {
+                        // İlk TG'yi varsayılan al
+                        answer_key = ak[tgs[0]];
+                        q_count = Math.max(...Object.keys(answer_key).map(k => parseInt(k, 10)).filter(n => !isNaN(n)));
+                    }
+                }
+
+                // 2) Sınav oluştur
+                // Template ve question_count batch'ten alınmalı; batch_id'siz sade endpoint istiyoruz
+                const examPayload = {
+                    name: name,
+                    class_id: classId,
+                    template: 'isu_dts1848_mvp',  // default; uygun şekilde değiştirilebilir
+                    question_count: q_count,
+                    answer_key: answer_key,
+                };
+                const newExam = await apiFetch('/api/exams', {
+                    method: 'POST',
+                    body: JSON.stringify(examPayload),
+                });
+
+                // 3) Batch'in tüm sonuçlarını yeni sınava ata
+                await apiFetch(`/api/scan/batch/${batchId}/assign-exam`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ exam_id: newExam.id }),
+                });
+
+                showToast(t('create_exam_from_batch_ok').replace('{name}', newExam.name), 'success');
+                document.getElementById('createExamFromBatchModal').removeAttribute('open');
+                await loadResults();
+            } catch (err) {
+                showToast((err.message || err), 'error');
+            }
+        });
+
+        window.openAssignDialog = function(scope, id) {
+            _assignTarget = { scope, id };
+            const title = scope === 'batch'
+                ? t('assign_to_exam_bulk')
+                : t('assign_to_exam');
+            document.getElementById('assignExamTitle').textContent = title;
+            document.getElementById('assignExamHelp').textContent =
+                scope === 'batch'
+                    ? `Bu klasördeki tüm sonuçları seçeceğin sınava ata.`
+                    : `Bu sonucu seçeceğin sınava ata.`;
+            // examOptions render sırasında zaten doldu — fallback yine de doldur
+            const sel = document.getElementById('assignExamSelect');
+            if (!sel.options || sel.options.length <= 1) {
+                const opts = Object.values(examsById)
+                    .map(e => `<option value="${e.id}">${e.name || ('Sınav #' + e.id)}</option>`)
+                    .join('');
+                sel.innerHTML = `<option value="">— ${t('select_exam_for_assign')} —</option>` + opts;
+            }
+            sel.value = '';
+            document.getElementById('assignExamModal').setAttribute('open', 'true');
+        };
+
+        document.getElementById('assignExamConfirmBtn').addEventListener('click', async () => {
+            if (!_assignTarget) return;
+            const examId = document.getElementById('assignExamSelect').value;
+            const payload = examId ? { exam_id: parseInt(examId, 10) } : { exam_id: null };
+            try {
+                if (_assignTarget.scope === 'bulk') {
+                    // Toplu: seçili id'lerin her birini ayrı PATCH ile gönder (paralel)
+                    const ids = _assignTarget.ids || [];
+                    await Promise.all(ids.map(id =>
+                        apiFetch(`/api/results/${id}/assign-exam`, {
+                            method: 'PATCH',
+                            body: JSON.stringify(payload),
+                        })
+                    ));
+                } else {
+                    const url = _assignTarget.scope === 'batch'
+                        ? `/api/scan/batch/${_assignTarget.id}/assign-exam`
+                        : `/api/results/${_assignTarget.id}/assign-exam`;
+                    await apiFetch(url, {
+                        method: 'PATCH',
+                        body: JSON.stringify(payload),
+                    });
+                }
+                showToast(t('assign_success'), 'success');
+                document.getElementById('assignExamModal').removeAttribute('open');
+                _assignTarget = null;
+                await loadResults();
+            } catch (err) {
+                console.error('Sınava atama hatası:', err);
+                showToast(t('assign_failed') + ': ' + (err.message || err), 'error');
+            }
+        });
+
+        // ── Toplu seçim toolbar'ı: durum hesabı + bağlama
+        function _selectedIds() {
+            return Array.from(document.querySelectorAll('.row-select-cb:checked'))
+                .map(cb => parseInt(cb.dataset.id, 10));
+        }
+        function _refreshBulkToolbarState() {
+            const sel = _selectedIds();
+            document.getElementById('selectedCountLabel').textContent = sel.length;
+            document.getElementById('bulkAssignBtn').disabled = sel.length === 0;
+            document.getElementById('bulkDeleteBtn').disabled = sel.length === 0;
+            // Tümünü seç checkbox'ının durumunu da güncelle
+            const all = document.querySelectorAll('.row-select-cb');
+            const masterCb = document.getElementById('selectAllResultsCb');
+            if (all.length === 0) {
+                masterCb.checked = false;
+                masterCb.indeterminate = false;
+            } else if (sel.length === all.length) {
+                masterCb.checked = true; masterCb.indeterminate = false;
+            } else if (sel.length === 0) {
+                masterCb.checked = false; masterCb.indeterminate = false;
+            } else {
+                masterCb.checked = false; masterCb.indeterminate = true;
+            }
+        }
+
+        document.getElementById('selectAllResultsCb').addEventListener('change', (e) => {
+            const checked = e.target.checked;
+            document.querySelectorAll('.row-select-cb').forEach(cb => { cb.checked = checked; });
+            _refreshBulkToolbarState();
+        });
+
+        document.getElementById('bulkAssignBtn').addEventListener('click', () => {
+            const ids = _selectedIds();
+            if (ids.length === 0) {
+                showToast(t('bulk_assign_no_selection'), 'warning');
+                return;
+            }
+            _assignTarget = { scope: 'bulk', ids };
+            document.getElementById('assignExamTitle').textContent = t('bulk_assign_dlg_title');
+            document.getElementById('assignExamHelp').textContent = `${ids.length} ${t('bulk_selected')} — ${t('assign_to_exam')}`;
+            const sel = document.getElementById('assignExamSelect');
+            sel.value = '';
+            document.getElementById('assignExamModal').setAttribute('open', 'true');
+        });
+
+        document.getElementById('bulkDeleteBtn').addEventListener('click', async () => {
+            const ids = _selectedIds();
+            if (ids.length === 0) return;
+            if (!confirm(t('bulk_delete_confirm').replace('{n}', ids.length))) return;
+            try {
+                const r = await apiFetch('/api/results/bulk-delete', {
+                    method: 'POST',
+                    body: JSON.stringify({ ids }),
+                });
+                showToast(t('bulk_delete_success').replace('{n}', r.deleted || ids.length), 'success');
+                await loadResults();
+            } catch (err) {
+                console.error('Toplu silme hatası:', err);
+                showToast((err.message || err), 'error');
+            }
+        });
+
+        // ── Tek satır sil
+        // ── Export kapsam/seçim dialog'u (CSV ve Yazdır için ortak)
+        //
+        // Kullanıcı seçimine göre `rows` ve `includeImages` döndürür.
+        // Dönüş: { ok, rows, includeImages } veya { ok: false } (iptal).
+        function _openExportDialog(action /* 'csv' | 'print' */) {
+            return new Promise((resolve) => {
+                const selectedIds = _selectedIds();
+                const hasSelection = selectedIds.length > 0;
+                const all = (resultsData || []).filter(r => !r.is_cevap_page).filter(_matchesFilter);
+                const sel = all.filter(r => selectedIds.includes(r.id));
+
+                const title = action === 'csv' ? t('export_csv_title') : t('export_print_title');
+                // Modal HTML
+                const dlg = document.createElement('dialog');
+                dlg.innerHTML = `
+                    <article style="max-width:480px;">
+                        <header>
+                            <button aria-label="Kapat" rel="prev" style="float:right;" id="_xpClose"></button>
+                            <h3 style="margin:0;">${title}</h3>
+                        </header>
+                        <p style="color:var(--pico-muted-color); margin-bottom:0.75rem;">${t('export_scope_q')}</p>
+
+                        <fieldset style="margin-bottom:0.5rem; padding:0.5rem 0.75rem; border:1px solid var(--pico-muted-border-color); border-radius:8px;">
+                            <legend style="font-size:0.8rem; color:var(--pico-muted-color); padding:0 0.3rem;">${t('export_scope_legend')}</legend>
+                            <label style="display:flex; gap:0.4rem; align-items:flex-start; cursor:pointer; margin-bottom:0.4rem;">
+                                <input type="radio" name="_xpScope" value="selected" ${hasSelection ? 'checked' : 'disabled'} style="margin:0.2rem 0 0;">
+                                <span>
+                                    <strong>${t('export_scope_selected')}</strong>
+                                    <small style="display:block; color:var(--pico-muted-color);">${hasSelection ? t('export_scope_selected_count').replace('{n}', sel.length) : t('export_scope_selected_none')}</small>
+                                </span>
+                            </label>
+                            <label style="display:flex; gap:0.4rem; align-items:flex-start; cursor:pointer;">
+                                <input type="radio" name="_xpScope" value="all" ${hasSelection ? '' : 'checked'} style="margin:0.2rem 0 0;">
+                                <span>
+                                    <strong>${t('export_scope_all')}</strong>
+                                    <small style="display:block; color:var(--pico-muted-color);">${t('export_scope_all_count').replace('{n}', all.length)}</small>
+                                </span>
+                            </label>
+                        </fieldset>
+
+                        <!-- Görsel toggle — ayrı fieldset, "Ek Seçenekler" başlığıyla -->
+                        <fieldset style="margin-bottom:0.5rem; padding:0.5rem 0.75rem; border:1px solid var(--pico-muted-border-color); border-radius:8px;">
+                            <legend style="font-size:0.8rem; color:var(--pico-muted-color); padding:0 0.3rem;">${t('export_extra_legend')}</legend>
+                            <label style="display:flex; gap:0.5rem; align-items:flex-start; cursor:pointer; margin:0;">
+                                <input type="checkbox" id="_xpIncludeImages" style="margin:0.2rem 0 0;">
+                                <span>
+                                    <strong>${action === 'csv' ? t('export_include_image_csv') : t('export_include_image_print')}</strong>
+                                    <small style="display:block; color:var(--pico-muted-color);">${action === 'csv' ? t('export_include_image_csv_help') : t('export_include_image_print_help')}</small>
+                                </span>
+                            </label>
+                        </fieldset>
+
+                        <div style="display:flex; gap:0.5rem; justify-content:flex-end; margin-top:0.75rem;">
+                            <button class="secondary" style="width:auto; margin:0;" id="_xpCancel">${t('btn_cancel')}</button>
+                            <button style="width:auto; margin:0;" id="_xpOk">${action === 'csv' ? t('btn_download_csv') : t('btn_print')}</button>
+                        </div>
+                    </article>
+                `;
+                document.body.appendChild(dlg);
+                dlg.setAttribute('open', 'true');
+
+                const cleanup = (result) => {
+                    dlg.removeAttribute('open');
+                    dlg.remove();
+                    resolve(result);
+                };
+                dlg.querySelector('#_xpClose').onclick = () => cleanup({ ok: false });
+                dlg.querySelector('#_xpCancel').onclick = () => cleanup({ ok: false });
+                dlg.querySelector('#_xpOk').onclick = () => {
+                    const scope = dlg.querySelector('input[name="_xpScope"]:checked')?.value;
+                    const includeImages = dlg.querySelector('#_xpIncludeImages').checked;
+                    const rows = scope === 'selected' ? sel : all;
+                    cleanup({ ok: true, rows, includeImages });
+                };
+            });
+        }
+
+        // ── Ortak veri hazırlama — CSV ve Yazdır aynı tabloyu kullanır
+        //
+        // Format (kullanıcı isteği):
+        //   Sütunlar: file ; ogrNO ; adSoyad ; grup ; dogru ; yanlıs ; bos ; puan ; cevaplar
+        //   "cevaplar": JSON string (tüm soru-cevap eşleşmesi)
+        //   En üstte: her test_group için cevap anahtarı satırı (anahtar varsa)
+        //   Ayrıca _ozet.json benzeri aggregate (toplam/ortalama/min/max)
+        // _buildExportData — async, çünkü hızlı tarama batch'lerinden auto_keys_by_tg
+        // bilgisini çekmek için backend'e istek atar.
+        //
+        // Cevap anahtarı toplama mantığı:
+        //   1) exam.answer_key (sınav atanmışsa, exams listesinden)
+        //   2) batch.auto_keys_by_tg (hızlı tarama, auto-key tespit edildiyse)
+        //   3) Yine de yoksa: her test_group için boş `{}` entry (kullanıcı talebi:
+        //      ilk N satır her durumda grup sayısı kadar)
+        async function _buildExportData(rows) {
+            const scored = rows.filter(r => r.scoring && r.scoring.percentage != null);
+            const avg = arr => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
+
+            // ─ Aggregate ─
+            const agg = scored.length > 0 ? {
+                total: rows.length,
+                scored: scored.length,
+                avgCorrect: avg(scored.map(r => Number(r.scoring.correct || 0))).toFixed(2),
+                avgWrong:   avg(scored.map(r => Number(r.scoring.wrong   || 0))).toFixed(2),
+                avgBlank:   avg(scored.map(r => Number(r.scoring.blank   || 0))).toFixed(2),
+                avgPercent: avg(scored.map(r => Number(r.scoring.percentage))).toFixed(2),
+                maxPercent: Math.max(...scored.map(r => Number(r.scoring.percentage))).toFixed(2),
+                minPercent: Math.min(...scored.map(r => Number(r.scoring.percentage))).toFixed(2),
+            } : null;
+
+            // ─ Sonuçlardaki tüm test_group'ları topla (anahtar olsa da olmasa da)
+            const allTgs = [...new Set(rows.map(r => r.test_group).filter(tg => tg && tg !== '-' && tg !== '#'))];
+
+            // ─ Cevap anahtarlarını topla ─
+            const answerKeysByTg = {};
+
+            // (1) Sınav atanmış sonuçlar → exam.answer_key
+            const examIds = [...new Set(rows.map(r => r.exam_id).filter(Boolean))];
+            for (const eid of examIds) {
+                const exam = examsById[eid];
+                if (exam?.answer_key && Object.keys(exam.answer_key).length > 0) {
+                    const tgsOfExam = [...new Set(rows.filter(x => x.exam_id === eid).map(x => x.test_group).filter(Boolean))];
+                    for (const tg of tgsOfExam) {
+                        if (!answerKeysByTg[tg]) answerKeysByTg[tg] = exam.answer_key;
+                    }
+                }
+            }
+
+            // (2) Hızlı tarama (auto-key) batch'lerinden → batch.auto_keys_by_tg
+            const batchIds = [...new Set(rows.map(r => r.batch_id).filter(Boolean))];
+            const batchInfos = await Promise.all(
+                batchIds.map(id =>
+                    apiFetch(`/api/scan/batch/${id}`).catch(() => null)
+                )
+            );
+            for (const bi of batchInfos) {
+                if (!bi?.auto_keys_by_tg) continue;
+                for (const [tg, key] of Object.entries(bi.auto_keys_by_tg)) {
+                    if (!answerKeysByTg[tg] && key && Object.keys(key).length > 0) {
+                        answerKeysByTg[tg] = key;
+                    }
+                }
+            }
+
+            // (3) Her test_group için bir entry garanti: anahtar yoksa {} koy
+            //     Böylece CSV/print her durumda grup sayısı kadar satırla başlar.
+            for (const tg of allTgs) {
+                if (!(tg in answerKeysByTg)) {
+                    answerKeysByTg[tg] = {};
+                }
+            }
+            // TG'leri sırala (A, B, C, ... veya 1, 2, 3 ...)
+            const sortedKeys = {};
+            Object.keys(answerKeysByTg).sort().forEach(k => sortedKeys[k] = answerKeysByTg[k]);
+
+            // ─ Her TG için "sınavın soru sayısı" = anahtarın max soru no'su
+            //   Anahtar boşsa → o gruba ait öğrenci cevap dict'lerinin keys union'unun max'ı
+            const maxQByTg = {};
+            for (const tg of Object.keys(sortedKeys)) {
+                const keyEntries = Object.keys(sortedKeys[tg])
+                    .map(k => parseInt(k, 10))
+                    .filter(n => !isNaN(n));
+                if (keyEntries.length > 0) {
+                    maxQByTg[tg] = Math.max(...keyEntries);
+                } else {
+                    // Anahtar yok → o gruptaki öğrenci cevaplarından max al
+                    const studentQs = new Set();
+                    for (const r of rows) {
+                        if (r.test_group !== tg) continue;
+                        for (const q of Object.keys(r.answers || {})) {
+                            const n = parseInt(q, 10);
+                            if (!isNaN(n)) studentQs.add(n);
+                        }
+                    }
+                    maxQByTg[tg] = studentQs.size > 0 ? Math.max(...studentQs) : 0;
+                }
+            }
+
+            // ─ Per-row ─
+            const tableRows = rows.map(r => {
+                const sc = r.scoring || {};
+                const examName = r.exam_id != null && examsById[r.exam_id] ? examsById[r.exam_id].name : '';
+                return {
+                    file: r.image_filename || r.output_label || '',
+                    ogrNO: r.student_number || '',
+                    adSoyad: r.full_name || '',
+                    grup: r.test_group || '',
+                    dogru: sc.correct ?? '',
+                    yanlis: sc.wrong ?? '',
+                    bos: sc.blank ?? '',
+                    puan: sc.percentage != null ? Number(sc.percentage).toFixed(2) : '',
+                    cevaplar: r.answers || {},
+                    examName,
+                    method: r.exam_id != null ? t('scan_method_exam') : t('scan_method_quick'),
+                    date: r.created_at ? new Date(r.created_at).toLocaleString('tr-TR') : '',
+                    imageUrl: r.marked_image_available ? `${window.location.origin}/api/scan-images/${r.id}` : '',
+                    id: r.id,
+                };
+            });
+
+            return { agg, answerKeysByTg: sortedKeys, tableRows, maxQByTg };
+        }
+
+        // Öğrenci cevap dict'ini "o sınavın soru sayısı kadar" sınırla
+        function _trimAnswersToMaxQ(answers, maxQ) {
+            if (!maxQ || maxQ <= 0) return answers || {};
+            const out = {};
+            for (const [q, a] of Object.entries(answers || {})) {
+                const n = parseInt(q, 10);
+                if (!isNaN(n) && n >= 1 && n <= maxQ) out[q] = a;
+            }
+            return out;
+        }
+
+        // ── Yazdırma — CSV ile aynı format/sütunlar; HTML tabloya render edip print et
+        window.printResults = async function() {
+            const choice = await _openExportDialog('print');
+            if (!choice.ok) return;
+            if (!choice.rows || choice.rows.length === 0) {
+                showToast(t('csv_no_data'), 'warning');
+                return;
+            }
+
+            const { agg, answerKeysByTg, tableRows, maxQByTg } = await _buildExportData(choice.rows);
+            const escHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c =>
+                ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
+            );
+
+            // html değişkeninde print için HTML birleştirilir, sonra yeni pencerede yazdırılır.
+
+            // ─── Üst bilgi: sınav adları, yöntemler, kapsam ────────────────
+            const uniqueExams = [...new Set(
+                tableRows.map(r => r.examName).filter(Boolean)
+            )];
+            const uniqueMethods = [...new Set(tableRows.map(r => r.method))];
+
+            // Sınav adı: tek sınav varsa adı, birden çoksa hepsi, hiç yoksa "—"
+            const examTitle = uniqueExams.length === 0
+                ? '—'
+                : uniqueExams.join(', ');
+            const methodTitle = uniqueMethods.join(', ');
+
+            let html = `
+                <header style="border-bottom:2px solid #333; padding-bottom:0.5rem; margin-bottom:1rem;">
+                    <h1 style="margin:0; font-size:1.3rem; font-weight:700;">${escHtml(t('print_header_exam'))}: ${escHtml(examTitle)}</h1>
+                    <h2 style="margin:0.15rem 0 0; font-size:1rem; font-weight:600; color:#444;">${escHtml(t('print_header_method'))}: ${escHtml(methodTitle)}</h2>
+                    <small style="display:block; margin-top:0.3rem; color:#666; font-size:0.78rem;">
+                        ${escHtml(t('print_header_printed_at'))}: ${new Date().toLocaleString('tr-TR')}
+                        &nbsp;·&nbsp;
+                        ${tableRows.length} ${escHtml(t('print_header_records').toLowerCase())}
+                    </small>
+                </header>
+            `;
+
+            // ─── Cevap anahtarları: her TG için bir satır, inline ─────────
+            //     "A Grubu Cevap Anahtarı: 1:A  2:B  3:C  ... N:Z"
+            //     Anahtar tanımlı değilse: "A Grubu Cevap Anahtarı: (tanımsız)"
+            if (Object.keys(answerKeysByTg).length > 0) {
+                html += `<section style="margin-bottom:1rem;">
+                    <h2 style="margin:0 0 0.5rem; font-size:1.05rem;">${escHtml(t('export_answer_keys'))}</h2>`;
+                for (const [tg, key] of Object.entries(answerKeysByTg)) {
+                    const entries = Object.entries(key)
+                        .map(([q, a]) => [parseInt(q, 10), a])
+                        .filter(([q]) => !isNaN(q))
+                        .sort((a, b) => a[0] - b[0]);
+                    const inline = entries.length === 0
+                        ? `<em style="color:#888;">${escHtml(t('print_key_undefined'))}</em>`
+                        : entries.map(([q, a]) => `${q}:<strong>${escHtml(a)}</strong>`).join('  ');
+                    html += `<div style="margin-bottom:0.5rem; padding:0.4rem 0.6rem; border:1px solid #aaa; border-radius:4px; background:#fafafa;">
+                        <div style="font-weight:bold; margin-bottom:0.2rem; font-size:0.9rem;">
+                            ${escHtml(t('print_group_key_title').replace('{tg}', tg))}
+                        </div>
+                        <div style="font-size:0.78rem; line-height:1.4; word-spacing:0.2em; font-family:monospace;">
+                            ${inline}
+                        </div>
+                    </div>`;
+                }
+                html += `</section>`;
+            }
+
+            // ─── Özet tablosu (aggregate) ────────────────────────────────
+            if (agg) {
+                html += `<section style="margin-bottom:1rem;">
+                    <h2 style="margin:0 0 0.5rem; font-size:1.05rem;">${escHtml(t('csv_section_summary'))}</h2>
+                    <table style="font-size:0.82rem; width:auto;">
+                        <tbody>
+                            <tr>
+                                <td><strong>${escHtml(t('csv_avg_correct'))}</strong></td><td>${agg.avgCorrect}</td>
+                                <td><strong>${escHtml(t('csv_avg_wrong'))}</strong></td><td>${agg.avgWrong}</td>
+                                <td><strong>${escHtml(t('csv_avg_blank'))}</strong></td><td>${agg.avgBlank}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>${escHtml(t('csv_avg_percent'))}</strong></td><td>%${agg.avgPercent}</td>
+                                <td><strong>${escHtml(t('csv_max_percent'))}</strong></td><td>%${agg.maxPercent}</td>
+                                <td><strong>${escHtml(t('csv_min_percent'))}</strong></td><td>%${agg.minPercent}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>`;
+            }
+
+            // ─── Sonuç tablosu — kullanıcının istediği kolonlar ──────────
+            html += `<section style="page-break-before:auto;">
+                <h2 style="margin:0 0 0.5rem; font-size:1.05rem;">${escHtml(t('csv_section_records'))}</h2>
+                <table style="width:100%; font-size:0.72rem; border-collapse:collapse;">
+                    <thead><tr>
+                        <th>ogrNO</th><th>adSoyad</th><th>grup</th>
+                        <th>dogru</th><th>yanlıs</th><th>bos</th><th>puan</th><th>cevaplar</th>
+                        <th>${escHtml(t('th_date'))}</th>
+                        <th>${escHtml(t('col_exam'))}</th>
+                        <th>${escHtml(t('col_method'))}</th>
+                        <th>${escHtml(t('source_pdf_label'))}</th>
+                        ${choice.includeImages ? `<th>${escHtml(t('csv_image_url'))}</th>` : ''}
+                    </tr></thead>
+                    <tbody>`;
+            for (const tr of tableRows) {
+                // Öğrenci cevaplarını grubuna ait maxQ ile kırp
+                const trimmedAns = _trimAnswersToMaxQ(tr.cevaplar, maxQByTg[tr.grup]);
+                // Görsel kolonu: link yerine slug (output_label tercihli, yoksa ogrNO yoksa id)
+                const slug = tr.imageUrl ? (tr.ogrNO || tr.id || '') : '';
+                html += `<tr>
+                    <td>${escHtml(tr.ogrNO)}</td>
+                    <td>${escHtml(tr.adSoyad)}</td>
+                    <td>${escHtml(tr.grup)}</td>
+                    <td>${tr.dogru}</td>
+                    <td>${tr.yanlis}</td>
+                    <td>${tr.bos}</td>
+                    <td>${tr.puan}</td>
+                    <td style="font-family:monospace; font-size:0.62rem; word-break:break-all;">${escHtml(JSON.stringify(trimmedAns))}</td>
+                    <td>${escHtml(tr.date)}</td>
+                    <td>${escHtml(tr.examName)}</td>
+                    <td>${escHtml(tr.method)}</td>
+                    <td>${escHtml(tr.file)}</td>
+                    ${choice.includeImages ? `<td>${escHtml(slug)}</td>` : ''}
+                </tr>`;
+            }
+            html += `</tbody></table></section>`;
+
+            // Yazdırma için yeni pencere — mevcut sayfayı bozmaz, CSS çakışmaz,
+            // browser cache'den bağımsız.
+            const printWin = window.open('', '_blank', 'width=900,height=700');
+            if (!printWin) {
+                showToast(t('print_popup_blocked'), 'error');
+                return;
+            }
+            printWin.document.write(`<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>${escHtml(t('export_print_title'))}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
+            padding: 1.5rem;
+            color: #000;
+            background: #fff;
+            font-size: 0.85rem;
+        }
+        header h1 { margin: 0; font-size: 1.4rem; font-weight: 700; }
+        header h2 { margin: 0.2rem 0 0; font-size: 1.05rem; font-weight: 600; color: #444; }
+        header small { display: block; margin-top: 0.4rem; color: #666; font-size: 0.8rem; }
+        header { border-bottom: 2px solid #333; padding-bottom: 0.5rem; margin-bottom: 1rem; }
+        h2.section { margin: 0.6rem 0 0.4rem; font-size: 1.05rem; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #888; padding: 0.3rem 0.4rem; font-size: 0.75rem; text-align: left; }
+        thead { background: #eee; }
+        code { background: #f5f5f5; padding: 0.1rem 0.3rem; border-radius: 2px; font-size: 0.72rem; }
+        .key-box {
+            margin-bottom: 0.5rem;
+            padding: 0.4rem 0.6rem;
+            border: 1px solid #aaa;
+            border-radius: 4px;
+            background: #fafafa;
+        }
+        .key-title { font-weight: bold; margin-bottom: 0.2rem; font-size: 0.9rem; }
+        .key-list { font-size: 0.78rem; line-height: 1.4; font-family: monospace; word-spacing: 0.2em; }
+        .cevap-cell { font-family: monospace; font-size: 0.62rem; word-break: break-all; max-width: 250px; }
+        @media print {
+            body { padding: 0.5rem; }
+            @page { size: A4 landscape; margin: 1cm; }
+        }
+    </style>
+</head>
+<body>
+${html}
+</body>
+</html>`);
+            printWin.document.close();
+            // Yeni pencere yüklenince yazdır + kapat
+            printWin.addEventListener('load', () => {
+                printWin.focus();
+                printWin.print();
+                // Print dialog'u kapandıktan sonra pencereyi kapat
+                setTimeout(() => printWin.close(), 500);
+            }, { once: true });
+        };
+
+        window.deleteResultRow = async function(resultId) {
+            if (!confirm(t('bulk_delete_confirm').replace('{n}', 1))) return;
+            try {
+                await apiFetch(`/api/results/${resultId}`, { method: 'DELETE' });
+                showToast(t('bulk_delete_success').replace('{n}', 1), 'success');
+                await loadResults();
+            } catch (err) {
+                showToast((err.message || err), 'error');
+            }
+        };
+
+        // ── Tüm batch (klasör) sil
+        window.deleteBatchFolder = async function(batchId) {
+            if (!confirm(t('delete_folder_confirm'))) return;
+            try {
+                await apiFetch(`/api/scan/batch/${batchId}`, { method: 'DELETE' });
+                showToast(t('delete_folder_success'), 'success');
+                await loadResults();
+            } catch (err) {
+                showToast((err.message || err), 'error');
+            }
+        };
+
+        // CSV Export — kullanıcı isteği:
+        //   1) En üstte her test_group için cevap anahtarı (varsa)
+        //   2) _ozet.json benzeri aggregate (toplam/ortalama/min/max)
+        //   3) Sütunlar: file;ogrNO;adSoyad;grup;dogru;yanlıs;bos;puan;cevaplar
+        //   4) "cevaplar" sütununda JSON string (öğrencinin tüm cevapları)
+        //   5) includeImages işaretliyse son kolon olarak işaretli görsel URL
+        //
+        // Delimiter: `;` (Excel TR'de standart, virgül decimal ayracı için ayrılır)
+        document.getElementById('exportCsvBtn').addEventListener('click', async () => {
+            const choice = await _openExportDialog('csv');
+            if (!choice.ok) return;
+            const rows = choice.rows;
+            if (rows.length === 0) {
+                showToast(t('csv_no_data'), 'warning');
+                return;
+            }
+
+            const { agg, answerKeysByTg, tableRows, maxQByTg } = await _buildExportData(rows);
+
+            const BOM = "﻿"; // UTF-8 BOM (Excel için Türkçe karakter koruma)
+            const SEP = ';';
+            const esc = (v) => {
+                if (v == null) return '';
+                const s = String(v).replace(/"/g, '""');
+                return /[";\n]/.test(s) ? `"${s}"` : s;
+            };
+
+            const lines = [];
+
+            // ─── 1) #ÖZET ────────────────────────────────────────────
+            lines.push('#ÖZET');
+            if (agg) {
+                lines.push(`${esc(t('csv_total_records'))}${SEP}${agg.total}`);
+                lines.push(`${esc(t('csv_scored_records'))}${SEP}${agg.scored}`);
+                lines.push(`${esc(t('csv_avg_correct'))}${SEP}${agg.avgCorrect}`);
+                lines.push(`${esc(t('csv_avg_wrong'))}${SEP}${agg.avgWrong}`);
+                lines.push(`${esc(t('csv_avg_blank'))}${SEP}${agg.avgBlank}`);
+                lines.push(`${esc(t('csv_avg_percent'))}${SEP}${agg.avgPercent}`);
+                lines.push(`${esc(t('csv_max_percent'))}${SEP}${agg.maxPercent}`);
+                lines.push(`${esc(t('csv_min_percent'))}${SEP}${agg.minPercent}`);
+            } else {
+                // En azından kayıt sayısını yaz
+                lines.push(`${esc(t('csv_total_records'))}${SEP}${tableRows.length}`);
+            }
+            lines.push('');
+
+            // ─── 2) #CEVAP_ANAHTARLARI ────────────────────────────────
+            //  Her test_group için bir satır. Cevap anahtarı seçilmemiş olsa bile
+            //  bu satırlar grup başına gelir (anahtar yoksa "{}" yazar).
+            lines.push('#CEVAP_ANAHTARLARI');
+            for (const [tg, key] of Object.entries(answerKeysByTg)) {
+                lines.push(`${esc(tg)}${SEP}${esc(JSON.stringify(key))}`);
+            }
+            lines.push('');
+
+            // ─── 3) #KAYITLAR ────────────────────────────────────────
+            lines.push('#KAYITLAR');
+            const header = [
+                'ogrNO', 'adSoyad', 'grup',
+                'dogru', 'yanlıs', 'bos', 'puan', 'cevaplar',
+                t('th_date'), t('col_exam'), t('col_method'), t('source_pdf_label'),
+            ];
+            if (choice.includeImages) header.push(t('csv_image_url'));
+            lines.push(header.join(SEP));
+
+            for (const tr of tableRows) {
+                // Cevapları öğrencinin grubuna ait soru sayısı kadar kırp
+                const trimmedAns = _trimAnswersToMaxQ(tr.cevaplar, maxQByTg[tr.grup]);
+                // Görsel kolonunda slug (link değil)
+                const slug = tr.imageUrl ? (tr.ogrNO || tr.id || '') : '';
+                const row = [
+                    esc(tr.ogrNO),
+                    esc(tr.adSoyad),
+                    esc(tr.grup),
+                    tr.dogru,
+                    tr.yanlis,
+                    tr.bos,
+                    tr.puan,
+                    esc(JSON.stringify(trimmedAns)),
+                    esc(tr.date),
+                    esc(tr.examName),
+                    esc(tr.method),
+                    esc(tr.file),
+                ];
+                if (choice.includeImages) row.push(esc(slug));
+                lines.push(row.join(SEP));
+            }
+
+            const blob = new Blob([BOM + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16);
+            a.href = url;
+            a.download = `sinav_sonuclari_ozet_${stamp}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast(t('csv_downloaded').replace('{n}', rows.length), 'success');
+        });
+
+        // ==========================================================================
+        // Klavye Kısayolları (Keyboard Shortcuts)
+        // ==========================================================================
+        document.addEventListener('keydown', function(e) {
+            // Ctrl + S (Mac için Cmd + S) -> Tarama sayfasına git
+            if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+                e.preventDefault();
+                const scanLink = document.querySelector('a[data-target="scan"]');
+                if (scanLink) {
+                    scanLink.click();
+                    if(typeof showToast === 'function') {
+                        showToast(window.t ? window.t('shortcut_scan') : 'Tarama moduna geçildi', 'info');
+                    }
+                }
+            }
+        });
+    </script>
+
+    <!-- Profile Modal -->
+    <dialog id="profileModal">
+        <article style="max-width: 500px;">
+            <header>
+                <button aria-label="Close" class="close" onclick="closeProfileModal()"></button>
+                <strong data-i18n="modal_profile_title">Hesabım</strong>
+            </header>
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <!-- Cinsiyete göre avatar — emoji ile (resim yüklemesi kaldırıldı) -->
+                <div id="profileAvatar" class="avatar-container" style="width: 90px; height: 90px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 3rem; margin: 0 auto 0.75rem; background: var(--pico-primary-focus); transition: background 0.2s;">
+                    <span id="profileAvatarEmoji">🧑</span>
+                </div>
+                <!-- Cinsiyet seçici -->
+                <div style="display:flex; gap:0.5rem; justify-content:center; margin-bottom: 1rem;">
+                    <button type="button" id="genderMaleBtn" class="outline secondary" style="width:auto; margin:0; padding:0.3rem 0.8rem; font-size:0.85rem;" onclick="setProfileGender('male')">
+                        👨 <span data-i18n="gender_male">Erkek</span>
+                    </button>
+                    <button type="button" id="genderFemaleBtn" class="outline secondary" style="width:auto; margin:0; padding:0.3rem 0.8rem; font-size:0.85rem;" onclick="setProfileGender('female')">
+                        👩 <span data-i18n="gender_female">Kız</span>
+                    </button>
+                    <button type="button" id="genderClearBtn" class="outline secondary" style="width:auto; margin:0; padding:0.3rem 0.8rem; font-size:0.85rem;" onclick="setProfileGender(null)" title="Cinsiyet belirtme">
+                        🧑
+                    </button>
+                </div>
+                <h3 id="profileName" style="margin: 0;">-</h3>
+                <p id="profileRole" style="color: var(--pico-muted-color); font-size: 0.875rem; font-weight: 600; text-transform: uppercase;">-</p>
+            </div>
+            
+            <form id="changePwdForm" onsubmit="changePassword(event)">
+                <label data-i18n="current_password">Mevcut Şifre</label>
+                <input type="password" id="currentPwd" required>
+                
+                <label data-i18n="new_password">Yeni Şifre</label>
+                <input type="password" id="newPwd" required minlength="6">
+                
+                <label data-i18n="confirm_password">Yeni Şifre (Tekrar)</label>
+                <input type="password" id="confirmPwd" required minlength="6">
+                
+                <button type="submit" data-i18n="update_password" style="margin-top: 1rem;">Şifreyi Güncelle</button>
+            </form>
+        </article>
+    </dialog>
+</body>
+</html>

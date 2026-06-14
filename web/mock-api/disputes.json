@@ -1,0 +1,21 @@
+[
+  {
+    "id": 1,
+    "result_id": 6,
+    "student_id": 101,
+    "message": "Soru 45 hatalı okunmuş olabilir, optik formumda iyi silinmemiş bir leke vardı.",
+    "status": "open",
+    "created_at": "2026-05-18T10:00:00"
+  },
+  {
+    "id": 2,
+    "result_id": 3,
+    "student_id": 102,
+    "message": "Puan hesaplamamda hata var gibi görünüyor.",
+    "status": "answered",
+    "response": "Kağıdınız tekrar incelendi, herhangi bir hata tespit edilmedi.",
+    "responder_name": "Ahmet Hoca",
+    "responded_at": "2026-05-17T15:30:00",
+    "created_at": "2026-05-17T12:00:00"
+  }
+]

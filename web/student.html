@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="OMR Optik Form Okuma Sistemi — Öğrenci Paneli. Aktif sınavlar, optik form tarama ve sonuçlarınızı görüntüleyin.">
+    <title>OMR - Öğrenci Paneli</title>
+    <!-- Pico.css -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <script src="./runtime-config.js"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Özel Stiller -->
+    <link rel="stylesheet" href="./style.css">
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="./manifest.json">
+    <style>
+        /* Öğrenci paneline özel ufak eklentiler */
+        .exam-card { padding: 1.5rem; border: 1px solid var(--pico-muted-border-color); border-radius: 12px; background: var(--pico-card-background-color); margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .badge-status { display:inline-flex; align-items:center; gap:0.25rem; font-size:0.7rem; padding:0.15rem 0.5rem; border-radius:12px; margin-left:0.5rem; vertical-align:middle; font-weight:500; }
+        .badge-done    { background:rgba(22,163,74,0.15); color:#16a34a; border:1px solid rgba(22,163,74,0.3); }
+        .badge-pending { background:rgba(234,179,8,0.15);  color:#a16207; border:1px solid rgba(234,179,8,0.3); }
+        [data-theme="dark"] .badge-done    { background:rgba(34,197,94,0.2);  color:#86efac; }
+        [data-theme="dark"] .badge-pending { background:rgba(250,204,21,0.15); color:#fde68a; }
+    </style>
+</head>
+<body>
+    <nav class="navbar container-fluid">
+        <div class="container nav-container">
+            <strong data-i18n="student_panel">OMR — Öğrenci Paneli</strong>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <span id="userNameDisplay" style="font-weight: bold; display: none;"></span>
+                <button id="profileBtn" class="secondary outline" style="padding: 0.25rem; width: auto; margin: 0; border: none;" title="Profilim" onclick="openProfileModal()"><i class="ph ph-user"></i></button>
+                <button id="darkModeToggle" class="secondary outline" style="padding: 0.25rem; width: auto; margin: 0; border: none;" title="Tema Değiştir"></button>
+                <button class="lang-toggle secondary outline" style="padding: 0.25rem 0.5rem; width: auto; margin: 0; border: none;">
+                    <i class="ph ph-globe"></i> <span class="lang-text">EN</span>
+                </button>
+                <button id="logoutBtn" class="secondary outline" style="padding: 0.25rem 1rem; width: auto; margin: 0;" data-i18n="nav_logout">Çıkış</button>
+                <button id="mobileMenuBtn" class="hamburger-btn"><i class="ph ph-list"></i></button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobil sidebar overlay -->
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeMobileSidebar()"></div>
+
+    <main class="container layout">
+        <aside class="sidebar">
+            <nav class="menu">
+                <a href="#" data-target="active-exams" class="active"><i class="ph ph-list-dashes"></i> <span data-i18n="nav_active_exams">Aktif Sınavlar</span></a>
+                <a href="#" data-target="scan" id="menuScan"><i class="ph ph-scan"></i> <span data-i18n="nav_scan">Tara</span></a>
+                <a href="#" data-target="results"><i class="ph ph-chart-bar"></i> <span data-i18n="nav_my_results">Sonuçlarım</span></a>
+                
+
+            </nav>
+        </aside>
+
+        <section>
+            <!-- Aktif Sınavlar -->
+            <div id="active-exams" class="section-content active">
+                <h2 data-i18n="nav_active_exams">Aktif Sınavlar</h2>
+                <div id="activeExamsList">
+                    <p data-i18n="loading">Yükleniyor...</p>
+                </div>
+            </div>
+
+            <!-- Tara -->
+            <div id="scan" class="section-content">
+                <h2 data-i18n="scan_form">Optik Formunu Tara</h2>
+                <article>
+                    <form id="scanForm">
+                        <label for="scanExamSelect" data-i18n="select_exam">Sınav Seç</label>
+                        <select id="scanExamSelect" required>
+                            <option value="" data-i18n="select_exam">Sınav Seçiniz...</option>
+                        </select>
+
+                        <label for="scanFileInput" data-i18n="scan_single_label">Optik Form Görseli veya PDF</label>
+                        <input type="file" id="scanFileInput" accept="image/*,application/pdf" required>
+
+                        <div id="filePreviewContainer" class="preview-container">
+                            <p style="margin-bottom:0.5rem; font-size:0.875rem; color:var(--pico-muted-color);" data-i18n="selected_files">Seçilen Görsel Önizlemesi</p>
+                            <img id="previewImage" class="preview-image" src="" alt="Önizleme">
+                        </div>
+
+                        <!-- ★ İşaretli görsel üret toggle -->
+                        <label style="display:flex; align-items:center; gap:0.5rem; margin-top:0.5rem; cursor:pointer;">
+                            <input type="checkbox" id="withImageToggle" style="margin:0;">
+                            <span><strong data-i18n="scan_with_image">İşaretli görsel üret (skor + işaretli .jpg)</strong>
+                                <small style="display:block; color:var(--pico-muted-color); font-size:0.8rem;" data-i18n="scan_with_image_help">Kapalıyken sadece skor üretilir; daha hızlı.</small>
+                            </span>
+                        </label>
+
+                        <button type="submit" id="scanBtn" disabled style="margin-top: 1rem;" data-i18n="btn_scan_single">TARA ve GÖNDER</button>
+                    </form>
+                    <div id="scanSpinner" class="spinner"></div>
+                </article>
+                
+                <div id="scanResultCard" style="display: none;">
+                    <article>
+                        <header><strong data-i18n="scan_success">Tarama Sonucu Başarılı!</strong></header>
+                        <div class="grid">
+                            <div>
+                                <p><strong data-i18n="th_correct">Doğru:</strong> <span id="resCorrect" style="color:var(--pico-ins-color); font-weight: bold;"></span></p>
+                                <p><strong data-i18n="th_wrong">Yanlış:</strong> <span id="resWrong" style="color:var(--pico-del-color); font-weight: bold;"></span></p>
+                                <p><strong data-i18n="res_blank">Boş:</strong> <span id="resBlank" style="font-weight: bold;"></span></p>
+                            </div>
+                            <div>
+                                <h3 style="margin: 0; color: var(--pico-primary);"><span data-i18n="res_score">Puan:</span> <span id="resScore"></span></h3>
+                            </div>
+                        </div>
+                        <hr>
+                        <p style="margin-bottom: 0.5rem;"><strong data-i18n="your_answers">Cevaplarınız:</strong></p>
+                        <div id="answersGrid" class="answer-grid"></div>
+                    </article>
+                </div>
+            </div>
+
+            <!-- Sonuçlarım -->
+            <div id="results" class="section-content">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+                    <h2 data-i18n="nav_my_results" style="margin:0;">Sonuçlarım</h2>
+                    <button class="filter-toggle outline secondary" data-target-panel="studentResultsFilters" style="width:auto; margin:0; padding:0.35rem 0.8rem;">
+                        <i class="ph ph-funnel"></i> <span data-i18n="filters_toggle">Filtreler</span>
+                    </button>
+                </div>
+                <div id="studentResultsFilters" class="filter-panel" style="display:none; padding:0.75rem; border:1px solid var(--pico-muted-border-color); border-radius:8px; margin:0.75rem 0;">
+                    <div class="search-container" style="margin:0; max-width:none;">
+                        <i class="ph ph-magnifying-glass"></i>
+                        <input type="search" id="studentResultSearch" placeholder="Grup veya tarih...">
+                    </div>
+                </div>
+
+                <div class="overflow-auto">
+                    <table role="grid" id="resultsTable">
+                        <thead>
+                            <tr>
+                                <th class="sortable-th" data-sort-key="date" onclick="sortStudentResults('date')"><span data-i18n="exam_date">Sınav Tarihi</span><span class="sort-ind"></span></th>
+                                <th class="sortable-th results-hide-mobile" data-sort-key="group" onclick="sortStudentResults('group')"><span data-i18n="th_group">Grup</span><span class="sort-ind"></span></th>
+                                <th class="sortable-th results-hide-mobile" data-sort-key="correct" onclick="sortStudentResults('correct')"><span data-i18n="th_correct">Doğru</span><span class="sort-ind"></span></th>
+                                <th class="sortable-th results-hide-mobile" data-sort-key="wrong" onclick="sortStudentResults('wrong')"><span data-i18n="th_wrong">Yanlış</span><span class="sort-ind"></span></th>
+                                <th class="results-hide-mobile" data-i18n="res_blank">Boş</th>
+                                <th class="sortable-th" data-sort-key="score" onclick="sortStudentResults('score')"><span data-i18n="res_score">Puan</span><span class="sort-ind"></span></th>
+                                <th data-i18n="col_actions">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsTableBody">
+                            <tr><td colspan="7" data-i18n="loading">Yükleniyor...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+
+    <script type="module">
+        import { requireAuth, logout, getName, apiFetch, USE_MOCK, t } from './auth.js?v=2';
+
+        // --- Toast Bildirim Sistemi ---
+        const toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container';
+        document.body.appendChild(toastContainer);
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            const icons = { success: 'ph-check-circle', error: 'ph-x-circle', info: 'ph-info', warning: 'ph-warning' };
+            toast.innerHTML = `<i class="ph ${icons[type] || icons.info}"></i> ${message}`;
+            toastContainer.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('toast-hide');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // 1. Yetki Kontrolü
+        requireAuth(['student']);
+
+        // 2. Navbar Bilgileri
+        function updateUserNameDisplay() {
+            document.getElementById('userNameDisplay').textContent = t('welcome') + ', ' + (getName() || t('role_student'));
+        }
+        updateUserNameDisplay();
+        window.addEventListener('languageChanged', () => {
+            updateUserNameDisplay();
+            loadActiveExams();
+            loadResults();
+        });
+
+        document.getElementById('logoutBtn').addEventListener('click', logout);
+        
+        // 3. Sekme Geçiş Mantığı
+        const menuLinks = document.querySelectorAll('.menu a');
+        const sections = document.querySelectorAll('.section-content');
+
+        function switchTab(targetId) {
+            menuLinks.forEach(l => l.classList.remove('active'));
+            sections.forEach(s => s.classList.remove('active'));
+            
+            const link = document.querySelector(`.menu a[data-target="${targetId}"]`);
+            if (link) link.classList.add('active');
+            
+            const section = document.getElementById(targetId);
+            if (section) section.classList.add('active');
+            
+            if (targetId === 'active-exams') loadActiveExams();
+            if (targetId === 'scan') loadExamsForScan();
+            if (targetId === 'results') loadResults();
+        }
+
+        menuLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                switchTab(link.getAttribute('data-target'));
+                // Mobilde tıklanınca menüyü kapat
+                if (window.innerWidth <= 768) {
+                    document.querySelector('.sidebar').classList.remove('mobile-open');
+                    const _ov = document.getElementById('sidebarOverlay');
+                    if (_ov) _ov.classList.remove('active');
+                }
+            });
+        });
+
+        // Hamburger Menü Toggle
+        window.closeMobileSidebar = function() {
+            const sb = document.querySelector('.sidebar');
+            const ov = document.getElementById('sidebarOverlay');
+            if (sb) sb.classList.remove('mobile-open');
+            if (ov) ov.classList.remove('active');
+        };
+        document.getElementById('mobileMenuBtn').addEventListener('click', () => {
+            const _sb = document.querySelector('.sidebar');
+            const _ov = document.getElementById('sidebarOverlay');
+            const _open = _sb.classList.toggle('mobile-open');
+            if (_ov) _ov.classList.toggle('active', _open);
+        });
+
+        // Ekran büyüyünce admin panelinde kullanıcı adını göster
+        if (window.innerWidth > 768) {
+            document.getElementById('userNameDisplay').style.display = 'inline';
+        }
+
+        function showSkeleton(tbodyId, columns) {
+            const tbody = document.getElementById(tbodyId);
+            let html = '';
+            for(let i=0; i<3; i++) {
+                html += '<tr>';
+                for(let j=0; j<columns; j++) {
+                    html += `<td><span class="skeleton"></span></td>`;
+                }
+                html += '</tr>';
+            }
+            tbody.innerHTML = html;
+        }
+
+        // --- Bölüm 1: Aktif Sınavlar ---
+        let activeExamsData = [];
+        let myResultsData = [];      // Aktif sınav durumunu hesaplamak için
+        async function loadActiveExams() {
+            const container = document.getElementById('activeExamsList');
+            container.innerHTML = '<div class="skeleton" style="height: 100px; margin-bottom: 1rem;"></div><div class="skeleton" style="height: 100px;"></div>';
+            try {
+                // Aktif sınavlar + öğrencinin kendi sonuçları — iki paralel istek
+                const [exams, results] = await Promise.all([
+                    apiFetch('/api/exams/active', {}, './mock-api/active-exams.json'),
+                    apiFetch('/api/results', {}, './mock-api/results.json').catch(() => []),
+                ]);
+                activeExamsData = exams || [];
+                myResultsData = results || [];
+                // exam_id → has-scan?
+                const scannedExamIds = new Set(
+                    myResultsData
+                        .filter(r => r.exam_id != null && !r.is_cevap_page)
+                        .map(r => r.exam_id)
+                );
+
+                container.innerHTML = '';
+                if (activeExamsData.length === 0) {
+                    container.innerHTML = `<div class="empty-state"><i class="ph ph-exam"></i>${t('msg_no_active_exams')}</div>`;
+                    return;
+                }
+
+                activeExamsData.forEach(exam => {
+                    const isDone = scannedExamIds.has(exam.id);
+                    const badge = isDone
+                        ? `<span class="badge-status badge-done"><i class="ph ph-check-circle"></i> ${t('exam_status_done')}</span>`
+                        : `<span class="badge-status badge-pending"><i class="ph ph-hourglass"></i> ${t('exam_status_pending')}</span>`;
+                    const btnLabel = isDone ? t('btn_detail') : t('nav_scan');
+                    const btnAction = isDone
+                        ? `onclick="goToMyResults(${exam.id})"`
+                        : `onclick="goToScan(${exam.id})"`;
+                    const btnClass = isDone ? 'secondary outline' : 'primary';
+                    container.innerHTML += `
+                        <div class="exam-card">
+                            <div style="flex:1;">
+                                <h3 style="margin: 0; font-size: 1.25rem;">${exam.name} ${badge}</h3>
+                                <p style="margin: 0; font-size: 0.85rem; color: var(--pico-muted-color);">${exam.class_name} — ${t('th_qcount')}: ${exam.question_count}</p>
+                            </div>
+                            <button class="${btnClass}" style="width: auto; margin: 0;" ${btnAction}>${btnLabel}</button>
+                        </div>
+                    `;
+                });
+            } catch (e) {
+                container.innerHTML = `<div class="empty-state"><i class="ph ph-warning-circle"></i>${t('msg_tpl_fail')}</div>`;
+            }
+        }
+
+        // Sonuçlarım sekmesine git ve mümkünse ilgili sınava odaklan
+        window.goToMyResults = function(examId) {
+            switchTab('results');
+        };
+
+        // Window'a ekleyelim ki onclick içinden erişilebilsin
+        window.goToScan = function(examId) {
+            switchTab('scan');
+            // Dropdown yüklendikten sonra değeri seçmesini bekle
+            setTimeout(() => {
+                const select = document.getElementById('scanExamSelect');
+                if (select) {
+                    select.value = examId;
+                    document.getElementById('scanBtn').disabled = false; // Seçim yapıldığı için butonu aktif et
+                }
+            }, 100);
+        };
+
+        loadActiveExams(); // Sayfa açılışında yükle
+
+        // --- Bölüm 2: Tara ---
+        async function loadExamsForScan() {
+            try {
+                // Aktif sınavları dropdown'a doldur
+                const exams = await apiFetch('/api/exams/active', {}, './mock-api/active-exams.json');
+                const select = document.getElementById('scanExamSelect');
+                
+                // Seçili değeri korumaya çalış (goToScan'den geldiysek)
+                const currentValue = select.value;
+                
+                select.innerHTML = `<option value="">${t('select_exam')}</option>`;
+                exams.forEach(ex => {
+                    select.innerHTML += `<option value="${ex.id}">${ex.name}</option>`;
+                });
+                
+                if (currentValue) {
+                    select.value = currentValue;
+                }
+                
+                // Seçim varsa butonu aktif et
+                document.getElementById('scanBtn').disabled = !select.value;
+            } catch (e) {
+                console.error("Sınavlar dropdown'a yüklenemedi.");
+            }
+        }
+
+        // Sınav seçimi yapılmadan "Tara" butonunu disabled tutma
+        document.getElementById('scanExamSelect').addEventListener('change', (e) => {
+            document.getElementById('scanBtn').disabled = !e.target.value;
+        });
+
+        // Dosya Önizleme
+        document.getElementById('scanFileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const container = document.getElementById('filePreviewContainer');
+            const img = document.getElementById('previewImage');
+            
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    img.src = evt.target.result;
+                    container.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                container.style.display = 'none';
+                img.src = '';
+            }
+        });
+
+        document.getElementById('scanForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('scanBtn');
+            const spinner = document.getElementById('scanSpinner');
+            const resultCard = document.getElementById('scanResultCard');
+            
+            btn.disabled = true;
+            spinner.style.display = 'block';
+            resultCard.style.display = 'none';
+
+            try {
+                let res;
+                if (!USE_MOCK) {
+                    // Gerçek API — FormData ile dosya gönder
+                    const formData = new FormData();
+                    formData.append('file', document.getElementById('scanFileInput').files[0]);
+                    formData.append('exam_id', document.getElementById('scanExamSelect').value);
+                    formData.append('with_image', document.getElementById('withImageToggle').checked ? 'true' : 'false');
+                    res = await apiFetch('/api/scan', { method: 'POST', body: formData });
+                } else {
+                    res = await apiFetch('/api/scan', { method: 'POST' }, './mock-api/scan-result.json');
+                }
+
+                const sc = res.scoring || {};
+                document.getElementById('resCorrect').textContent = sc.correct ?? '-';
+                document.getElementById('resWrong').textContent   = sc.wrong   ?? '-';
+                document.getElementById('resBlank').textContent   = sc.blank   ?? '-';
+                document.getElementById('resScore').textContent   = sc.percentage != null
+                    ? Number(sc.percentage).toFixed(2)
+                    : '-';
+
+                // Cevap grid'ini doldur (cevap anahtarı olsun olmasın her halükarda öğrencinin işaretlerini göster)
+                const grid = document.getElementById('answersGrid');
+                grid.innerHTML = '';
+                if (res.answers && Object.keys(res.answers).length > 0) {
+                    const entries = Object.entries(res.answers).sort((a, b) => Number(a[0]) - Number(b[0]));
+                    for (const [qNum, ans] of entries) {
+                        grid.innerHTML += `<div class="answer-box"><span>${qNum}</span><span style="color:var(--pico-primary);">${ans}</span></div>`;
+                    }
+                } else {
+                    grid.innerHTML = '<p style="grid-column: 1 / -1; width: 100%;">Cevap detayı bulunamadı.</p>';
+                }
+
+                // İşaretli görsel butonu (with_image=true ile tarandıysa marked.jpg üretilmiştir)
+                if (res.id) {
+                    const actionRow = document.createElement('div');
+                    actionRow.style.cssText = 'margin-top: 1rem; display:flex; gap:0.5rem; flex-wrap:wrap;';
+                    if (document.getElementById('withImageToggle').checked) {
+                        const imgBtn = document.createElement('button');
+                        imgBtn.className = 'outline';
+                        imgBtn.style.cssText = 'width:auto; margin:0;';
+                        imgBtn.innerHTML = `<i class="ph ph-image"></i> ${t('scan_view_marked')}`;
+                        imgBtn.onclick = () => showMarkedImage(res.id, res.student_number || res.full_name || `result_${res.id}`);
+                        actionRow.appendChild(imgBtn);
+                    }
+                    const goResultsBtn = document.createElement('button');
+                    goResultsBtn.className = 'contrast';
+                    goResultsBtn.style.cssText = 'width:auto; margin:0;';
+                    goResultsBtn.innerHTML = `${t('scan_go_results')}`;
+                    goResultsBtn.onclick = () => {
+                        const link = document.querySelector('.sidebar .menu a[data-target="results"]');
+                        if (link) link.click();
+                        loadResults();
+                    };
+                    actionRow.appendChild(goResultsBtn);
+                    // Eski action row varsa sil, yenisini ekle
+                    const oldRow = document.getElementById('scanResultActionRow');
+                    if (oldRow) oldRow.remove();
+                    actionRow.id = 'scanResultActionRow';
+                    document.querySelector('#scanResultCard article').appendChild(actionRow);
+                }
+
+                resultCard.style.display = 'block';
+                showToast(t('scan_success'), 'success');
+            } catch (err) {
+                console.error('Tarama hatası:', err);
+                showToast((err.message || t('msg_scan_err')), 'error');
+            } finally {
+                btn.disabled = false;
+                spinner.style.display = 'none';
+            }
+        });
+
+        // --- Bölüm 3: Sonuçlarım ---
+        // --- Sonuçlarım: sortable + filter ---
+        let _studentResultsData = [];
+        let _studentSort = { key: 'date', dir: 'desc' };
+
+        window.sortStudentResults = function(key) {
+            if (_studentSort.key === key) _studentSort.dir = _studentSort.dir === 'asc' ? 'desc' : 'asc';
+            else { _studentSort.key = key; _studentSort.dir = 'asc'; }
+            renderStudentResults();
+        };
+
+        function renderStudentResults() {
+            const tbody = document.getElementById('resultsTableBody');
+            const q = (document.getElementById('studentResultSearch')?.value || '').toLowerCase();
+            const filtered = (_studentResultsData || []).filter(r => {
+                if (!q) return true;
+                const dt = r.created_at ? new Date(r.created_at).toLocaleString().toLowerCase() : '';
+                return (r.test_group || '').toLowerCase().includes(q) || dt.includes(q);
+            });
+            // Sort
+            const sign = _studentSort.dir === 'desc' ? -1 : 1;
+            const sorted = [...filtered].sort((a, b) => {
+                let va, vb;
+                switch (_studentSort.key) {
+                    case 'group':   va = (a.test_group || '');                    vb = (b.test_group || ''); break;
+                    case 'correct': va = a.scoring?.correct ?? -1;                vb = b.scoring?.correct ?? -1; break;
+                    case 'wrong':   va = a.scoring?.wrong ?? -1;                  vb = b.scoring?.wrong ?? -1; break;
+                    case 'score':   va = a.scoring?.percentage ?? -1;             vb = b.scoring?.percentage ?? -1; break;
+                    case 'date':
+                    default:        va = a.created_at ? new Date(a.created_at).getTime() : 0;
+                                    vb = b.created_at ? new Date(b.created_at).getTime() : 0; break;
+                }
+                if (va < vb) return -1 * sign;
+                if (va > vb) return  1 * sign;
+                return 0;
+            });
+
+            // Sort indicators
+            document.querySelectorAll('#resultsTable .sort-ind').forEach(el => el.innerHTML = '');
+            const indEl = document.querySelector(`#resultsTable th[data-sort-key="${_studentSort.key}"] .sort-ind`);
+            if (indEl) indEl.innerHTML = _studentSort.dir === 'asc'
+                ? ' <i class="ph ph-caret-up" style="font-size:0.7em;"></i>'
+                : ' <i class="ph ph-caret-down" style="font-size:0.7em;"></i>';
+
+            if (sorted.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="empty-state"><i class="ph ph-clipboard-text"></i>${t('msg_no_results')}</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = sorted.map(res => {
+                const date = res.created_at ? new Date(res.created_at).toLocaleString() : '-';
+                const sc = res.scoring || {};
+                const imgBtn = res.marked_image_available
+                    ? `<button class="outline" style="padding:0.25rem 0.5rem; width:auto; margin:0 0.25rem 0 0;" title="${t('scan_view_marked')}" onclick="showMarkedImage(${res.id}, '${(res.output_label || res.student_number || '').replace(/'/g, "\\'")}')"><i class="ph ph-image"></i></button>`
+                    : '';
+                const dispBadge = (res.dispute_count || 0) > 0
+                    ? ` <span class="badge-status badge-pending" title="${t('dispute_badge_title')}"><i class="ph ph-megaphone"></i> ${res.dispute_count}</span>`
+                    : '';
+                return `
+                    <tr>
+                        <td>${date}${dispBadge}</td>
+                        <td class="results-hide-mobile">${res.test_group ?? '-'}</td>
+                        <td class="results-hide-mobile">${sc.correct ?? '-'}</td>
+                        <td class="results-hide-mobile">${sc.wrong ?? '-'}</td>
+                        <td class="results-hide-mobile">${sc.blank ?? '-'}</td>
+                        <td style="font-weight: bold;">${sc.percentage != null ? '%' + Number(sc.percentage).toFixed(2) : '-'}</td>
+                        <td>${imgBtn}<button class="outline secondary" style="padding:0.25rem 0.5rem; width:auto; margin:0;" title="${t('btn_detail')}" onclick="showResultDetail(${res.id})"><i class="ph ph-info"></i></button></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function loadResults() {
+            showSkeleton('resultsTableBody', 7);
+            try {
+                await new Promise(r => setTimeout(r, 400));
+                const resultsData = await apiFetch('/api/results', {}, './mock-api/results.json');
+                const studentNo = localStorage.getItem('omr_student_number');
+                _studentResultsData = (resultsData || []).filter(r =>
+                    USE_MOCK ? r.student_number == studentNo : true
+                );
+                renderStudentResults();
+            } catch (e) {
+                document.getElementById('resultsTableBody').innerHTML = `<tr><td colspan="7" class="empty-state"><i class="ph ph-warning-circle"></i>${t('msg_results_fail')}</td></tr>`;
+            }
+        }
+
+        // Filter event + collapsible toggle
+        document.getElementById('studentResultSearch')?.addEventListener('input', renderStudentResults);
+        document.querySelectorAll('.filter-toggle').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const panel = document.getElementById(btn.dataset.targetPanel);
+                if (!panel) return;
+                const open = panel.style.display !== 'none';
+                panel.style.display = open ? 'none' : 'block';
+                btn.classList.toggle('contrast', !open);
+            });
+        });
+
+    </script>
+
+    <!-- ★ Marked Image Viewer Modal -->
+    <dialog id="markedImageModal">
+        <article style="max-width: 95vw;">
+            <header>
+                <button aria-label="Kapat" rel="prev" style="float: right;" onclick="document.getElementById('markedImageModal').removeAttribute('open')"></button>
+                <h3 style="margin: 0;" id="markedImageTitle" data-i18n="marked_title">İşaretli Görsel</h3>
+            </header>
+            <div style="display:flex; justify-content:center; align-items:flex-start; background:#111; border-radius:8px; padding:0.5rem; min-height:200px; max-height:75vh; overflow:auto;">
+                <img id="markedImageImg" src="" alt="Annotated marked image" style="max-width:100%; height:auto; display:block; margin: 0 auto;">
+                <div id="markedImageLoading" style="color:#fff; padding:2rem; align-self:center;" data-i18n="marked_loading">Görsel yükleniyor…</div>
+            </div>
+        </article>
+    </dialog>
+
+    <!-- ★ Detail Modal -->
+    <dialog id="detailModal">
+        <article style="max-width: 600px;">
+            <header>
+                <button aria-label="Kapat" rel="prev" style="float: right;" onclick="document.getElementById('detailModal').removeAttribute('open')"></button>
+                <h3 style="margin: 0;" data-i18n="btn_detail">Detay</h3>
+            </header>
+            <div id="detailModalContent"></div>
+        </article>
+    </dialog>
+
+    <!-- Marked viewer + detail global helper'lar -->
+    <script type="module">
+        import { fetchBlobAuthed, apiFetch, t } from './auth.js?v=2';
+        let _markedBlobUrl = null;
+        window.showMarkedImage = async function (resultId, label) {
+            const modal   = document.getElementById('markedImageModal');
+            const img     = document.getElementById('markedImageImg');
+            const loading = document.getElementById('markedImageLoading');
+            const title   = document.getElementById('markedImageTitle');
+            if (_markedBlobUrl) { URL.revokeObjectURL(_markedBlobUrl); _markedBlobUrl = null; }
+            img.style.display = 'none'; img.src = '';
+            loading.style.display = 'block';
+            loading.textContent = t('marked_loading');
+            title.textContent = label ? `${t('marked_title')} — ${label}` : t('marked_title');
+            modal.setAttribute('open', 'true');
+            try {
+                _markedBlobUrl = await fetchBlobAuthed(`/api/scan-images/${resultId}`);
+                img.src = _markedBlobUrl;
+                img.style.display = 'block';
+                loading.style.display = 'none';
+            } catch (err) {
+                loading.textContent = `${t('marked_load_failed')}: ${err.message || err}`;
+            }
+        };
+
+        window.showResultDetail = async function (resultId) {
+            const content = document.getElementById('detailModalContent');
+            content.innerHTML = `<p style="text-align:center; padding:1rem; color:var(--pico-muted-color);">${t('loading')}</p>`;
+            document.getElementById('detailModal').setAttribute('open', 'true');
+            let res;
+            try {
+                res = await apiFetch(`/api/results/${resultId}`, {}, './mock-api/results.json');
+                if (Array.isArray(res)) {
+                    res = res.find(r => String(r.id) === String(resultId));
+                    if (!res) throw new Error("Kayıt bulunamadı");
+                }
+            } catch (err) {
+                content.innerHTML = `<p style="color:var(--pico-del-color);">${err.message || err}</p>`;
+                return;
+            }
+            const sc = res.scoring || null;
+            const ak = res.answer_key && Object.keys(res.answer_key).length > 0;
+            const date = res.created_at ? new Date(res.created_at).toLocaleString() : '-';
+            let html = `
+                <p><strong>${t('th_date')}:</strong> ${date}</p>
+                <p><strong>${t('th_group')}:</strong> ${res.test_group ?? '-'}</p>
+                ${sc ? `
+                    <p><strong>${t('th_correct')}:</strong> <span style="color:var(--pico-ins-color); font-weight:bold;">${sc.correct}</span> ·
+                       <strong>${t('th_wrong')}:</strong> <span style="color:var(--pico-del-color); font-weight:bold;">${sc.wrong}</span> ·
+                       <strong>${t('res_blank')}:</strong> <span style="font-weight:bold;">${sc.blank}</span></p>
+                    <h3 style="margin:0.5rem 0; color:var(--pico-primary);">${t('res_score')}: %${Number(sc.percentage).toFixed(2)}</h3>
+                ` : `<p style="color:var(--pico-muted-color);">${t('no_key_no_score')}</p>`}
+                <hr>
+                <p style="margin-bottom: 0.5rem;"><strong>${ak ? t('res_map') : t('marked_answers_title')}:</strong></p>
+                <div class="answer-grid">
+            `;
+            if (res.answers && Object.keys(res.answers).length > 0) {
+                const entries = Object.entries(res.answers).sort((a,b) => Number(a[0]) - Number(b[0]));
+                for (const [q, a] of entries) {
+                    const stu = (a ?? '-') + '';
+                    const cor = ak ? (res.answer_key[q] || res.answer_key[String(q)] || '') : '';
+                    let bg = '', lbl;
+                    if (ak && cor) {
+                        if (stu === '-' || stu === '') { bg='background:rgba(148,163,184,0.18);'; lbl=`<span style="color:var(--pico-muted-color);">${stu||'-'}</span> <small>→${cor}</small>`; }
+                        else if (stu === cor) { bg='background:rgba(22,163,74,0.18);'; lbl=`<span style="color:var(--pico-ins-color);">${stu}</span>`; }
+                        else { bg='background:rgba(220,38,38,0.18);'; lbl=`<span style="color:var(--pico-del-color);">${stu}</span> <small>→${cor}</small>`; }
+                    } else {
+                        lbl = `<span style="color:var(--pico-primary);">${stu}</span>`;
+                    }
+                    html += `<div class="answer-box" style="${bg}"><span>${q}</span>${lbl}</div>`;
+                }
+            } else {
+                html += '<p style="grid-column: 1 / -1;">Cevap detayı bulunamadı.</p>';
+            }
+            html += '</div>';
+            if (res.marked_image_available) {
+                html += `<hr><div style="text-align:center;"><button class="outline" style="width:auto; margin:0;" onclick="showMarkedImage(${res.id}, '${(res.output_label || res.student_number || '').replace(/'/g, "\\'")}')"><i class="ph ph-image"></i> ${t('scan_view_marked')}</button></div>`;
+            }
+
+            // ─── İtirazlar bölümü ───
+            html += `<hr><div id="disputesBlock"><p style="text-align:center; color:var(--pico-muted-color);">${t('loading')}</p></div>`;
+            content.innerHTML = html;
+
+            try {
+                let list = await apiFetch(`/api/results/${res.id}/disputes`, {}, './mock-api/disputes.json');
+                if (Array.isArray(list)) list = list.filter(d => String(d.result_id) === String(res.id));
+                const block = document.getElementById('disputesBlock');
+                let dh = `<h6 style="margin-bottom:0.5rem;">${t('disputes_my')} (${list.length})</h6>`;
+                if (list.length > 0) {
+                    list.forEach(d => {
+                        const stCls = d.status === 'open' ? 'badge-pending' : 'badge-done';
+                        const stLbl = d.status === 'open' ? t('disp_status_open')
+                                    : d.status === 'answered' ? t('disp_status_answered') : t('disp_status_closed');
+                        dh += `
+                            <div style="padding:0.6rem; border:1px solid var(--pico-muted-border-color); border-radius:8px; margin-bottom:0.5rem;">
+                                <div style="display:flex; justify-content:space-between; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.25rem;">
+                                    <small style="color:var(--pico-muted-color);">${d.created_at ? new Date(d.created_at).toLocaleString() : ''}</small>
+                                    <span class="badge-status ${stCls}">${stLbl}</span>
+                                </div>
+                                <p style="margin:0.2rem 0; font-size:0.9rem;">${d.message}</p>
+                                ${d.response ? `<div style="margin-top:0.4rem; padding:0.4rem 0.6rem; background:rgba(46,158,110,0.08); border-left:3px solid var(--pico-primary); border-radius:4px; font-size:0.85rem;"><strong>${t('disp_response')}:</strong> ${d.response}<br><small style="color:var(--pico-muted-color);">${d.responder_name || '-'} · ${d.responded_at ? new Date(d.responded_at).toLocaleString() : ''}</small></div>` : ''}
+                                ${d.status === 'open' ? `<button class="outline contrast" style="width:auto; margin:0.4rem 0 0 0; padding:0.15rem 0.5rem; font-size:0.75rem;" onclick="deleteDispute(${d.id})"><i class="ph ph-trash"></i> ${t('btn_delete')}</button>` : ''}
+                            </div>
+                        `;
+                    });
+                }
+                // İtiraz oluştur butonu (her halükarda göster, backend duplicate kontrol yapar)
+                dh += `
+                    <button class="outline" style="width:auto; margin:0; padding:0.3rem 0.8rem;" onclick="openCreateDispute(${res.id})">
+                        <i class="ph ph-megaphone"></i> ${t('dispute_create_btn')}
+                    </button>
+                `;
+                block.innerHTML = dh;
+            } catch (err) {
+                document.getElementById('disputesBlock').innerHTML = `<p style="color:var(--pico-del-color);">${err.message || err}</p>`;
+            }
+        };
+
+        // ─── İtiraz oluştur formu (mini modal) ───
+        window.openCreateDispute = function(resultId) {
+            const msg = prompt(t('dispute_prompt'));
+            if (!msg || msg.trim().length < 3) return;
+            apiFetch(`/api/results/${resultId}/dispute`, {
+                method: 'POST',
+                body: JSON.stringify({ message: msg.trim() }),
+            }).then(() => {
+                showToast(t('dispute_created'), 'success');
+                showResultDetail(resultId);  // listeyi yenile
+            }).catch(err => {
+                showToast((err.message || err), 'error');
+            });
+        };
+
+        window.deleteDispute = function(disputeId) {
+            if (!confirm(t('dispute_delete_confirm'))) return;
+            apiFetch(`/api/disputes/${disputeId}`, { method: 'DELETE' })
+                .then(() => {
+                    showToast(t('dispute_deleted'), 'success');
+                    // Re-render — son resultId state'i yok, modal'ı kapat
+                    document.getElementById('detailModal').removeAttribute('open');
+                })
+                .catch(err => showToast((err.message || err), 'error'));
+        };
+    </script>
+
+    <!-- Profile Modal -->
+    <dialog id="profileModal">
+        <article style="max-width: 500px;">
+            <header>
+                <button aria-label="Close" class="close" onclick="closeProfileModal()"></button>
+                <strong data-i18n="modal_profile_title">Hesabım</strong>
+            </header>
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <!-- Cinsiyete göre avatar — emoji ile (resim yüklemesi kaldırıldı) -->
+                <div id="profileAvatar" class="avatar-container" style="width: 90px; height: 90px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 3rem; margin: 0 auto 0.75rem; background: var(--pico-primary-focus); transition: background 0.2s;">
+                    <span id="profileAvatarEmoji">🧑</span>
+                </div>
+                <!-- Cinsiyet seçici -->
+                <div style="display:flex; gap:0.5rem; justify-content:center; margin-bottom: 1rem;">
+                    <button type="button" id="genderMaleBtn" class="outline secondary" style="width:auto; margin:0; padding:0.3rem 0.8rem; font-size:0.85rem;" onclick="setProfileGender('male')">
+                        👨 <span data-i18n="gender_male">Erkek</span>
+                    </button>
+                    <button type="button" id="genderFemaleBtn" class="outline secondary" style="width:auto; margin:0; padding:0.3rem 0.8rem; font-size:0.85rem;" onclick="setProfileGender('female')">
+                        👩 <span data-i18n="gender_female">Kız</span>
+                    </button>
+                    <button type="button" id="genderClearBtn" class="outline secondary" style="width:auto; margin:0; padding:0.3rem 0.8rem; font-size:0.85rem;" onclick="setProfileGender(null)" title="Cinsiyet belirtme">
+                        🧑
+                    </button>
+                </div>
+                <h3 id="profileName" style="margin: 0;">-</h3>
+                <p id="profileRole" style="color: var(--pico-muted-color); font-size: 0.875rem; font-weight: 600; text-transform: uppercase;">-</p>
+            </div>
+            
+            <form id="changePwdForm" onsubmit="changePassword(event)">
+                <label data-i18n="current_password">Mevcut Şifre</label>
+                <input type="password" id="currentPwd" required>
+                
+                <label data-i18n="new_password">Yeni Şifre</label>
+                <input type="password" id="newPwd" required minlength="6">
+                
+                <label data-i18n="confirm_password">Yeni Şifre (Tekrar)</label>
+                <input type="password" id="confirmPwd" required minlength="6">
+                
+                <button type="submit" data-i18n="update_password" style="margin-top: 1rem;">Şifreyi Güncelle</button>
+            </form>
+        </article>
+    </dialog>
+</body>
+</html>

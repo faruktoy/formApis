@@ -1,0 +1,7 @@
+[ 
+  { 
+    "id": 1, "name": "BST210 Vize Sınavı", 
+    "class_name": "Bilgisayar Müh. 2. Sınıf", 
+    "question_count": 100, "is_active": true 
+  } 
+]
